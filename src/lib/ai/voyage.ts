@@ -1,6 +1,6 @@
 const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY
 const VOYAGE_BASE_URL = "https://api.voyageai.com/v1"
-const EMBED_MODEL = "voyage-3-small"
+const EMBED_MODEL = "voyage-3-lite"
 
 if (!VOYAGE_API_KEY) {
   throw new Error("VOYAGE_API_KEY no está configurada en variables de entorno")

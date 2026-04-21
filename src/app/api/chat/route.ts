@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
   const providerStream = await provider.stream(messages)
 
   // 4. Transformar stream del proveedor → stream SSE para el cliente
-  const isOllama = process.env.CHAT_PROVIDER === 'groq'
+  const isOllama = process.env.CHAT_PROVIDER === 'ollama'
+  const isGroq = process.env.CHAT_PROVIDER === 'groq'
 
   const encoder = new TextEncoder()
   const decoder = new TextDecoder()
