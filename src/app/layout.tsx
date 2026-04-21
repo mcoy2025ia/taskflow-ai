@@ -1,15 +1,32 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import './globals.css'
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'})
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
 const geistMono = Geist_Mono({ variable: '--font-mono', subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'TaskFlow AI',
-  description: 'Gestión de tareas con IA generativa',
+  title: {
+    default: 'TaskFlow AI',
+    // Each page can override just the prefix: "Mi tablero | TaskFlow AI"
+    template: '%s | TaskFlow AI',
+  },
+  description:
+    'Gestiona tus tareas con inteligencia artificial. Tablero Kanban con drag-and-drop y asistente RAG en lenguaje natural.',
+  openGraph: {
+    siteName: 'TaskFlow AI',
+    type: 'website',
+  },
+}
+
+// Next.js 13+: viewport must be a separate export, not inside metadata.
+// Deliberately omitting userScalable:false and maximumScale — these break
+// pinch-to-zoom on mobile and fail Lighthouse accessibility audits.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

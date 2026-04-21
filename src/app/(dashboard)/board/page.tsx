@@ -1,16 +1,26 @@
+import type { Metadata } from 'next'
+import nextDynamic from 'next/dynamic'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getAuthUser } from '@/lib/supabase/get-user'
-import { KanbanBoard } from '@/components/kanban/board'
 import { KanbanSkeleton } from '@/components/kanban/skeleton'
 import type { Task } from '@/types/app.types'
 
 export const dynamic = 'force-dynamic'
 
-// Isolated async component — only this suspends, not the whole page.
-// Next.js streams the shell HTML (h1 + skeleton) immediately, then
-// flushes this component's HTML when the Supabase query resolves.
+export const metadata: Metadata = {
+  title: 'Mi tablero',
+  description: 'Organiza tus tareas con drag-and-drop y busca en lenguaje natural con el asistente IA.',
+}
+
+// @dnd-kit (~60 KB) is excluded from the initial bundle — loaded lazily after
+// the shell HTML is painted. ssr:false is correct: drag-and-drop is client-only.
+const KanbanBoard = nextDynamic(
+  () => import('@/components/kanban/board').then(m => m.KanbanBoard),
+  { ssr: false, loading: () => <KanbanSkeleton /> }
+)
+
 async function BoardTasks() {
   const user = await getAuthUser()
   if (!user) redirect('/login')
@@ -29,8 +39,6 @@ async function BoardTasks() {
   return <KanbanBoard initialTasks={(tasks as Task[]) ?? []} />
 }
 
-// Synchronous shell — renders in the first HTTP chunk.
-// The <h1> is the LCP candidate and arrives before the DB query resolves.
 export default function BoardPage() {
   return (
     <main className="flex-1 p-6 overflow-hidden">

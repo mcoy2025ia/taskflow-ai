@@ -25,7 +25,8 @@
       "Bash(vercel build *)",
       "Bash(vercel pull *)",
       "Bash(npx vitest *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(npx next *)"
     ]
   }
 }

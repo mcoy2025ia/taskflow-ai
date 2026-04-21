@@ -1,6 +1,12 @@
+import type { Metadata } from 'next'
 import { RegisterForm } from '@/components/auth/register-form'
 import { Zap } from 'lucide-react'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'Crear cuenta',
+  description: 'Crea tu cuenta en TaskFlow AI. Organiza tus proyectos y tareas con un asistente de IA.',
+}
 
 export default function RegisterPage() {
   return (

@@ -1,6 +1,12 @@
+import type { Metadata } from 'next'
 import { LoginForm } from '@/components/auth/login-form'
 import { Zap } from 'lucide-react'
 import Link from 'next/link'
+
+export const metadata: Metadata = {
+  title: 'Iniciar sesión',
+  description: 'Accede a tu workspace de TaskFlow AI para gestionar tus tareas con inteligencia artificial.',
+}
 
 export default function LoginPage() {
   return (
