@@ -9,7 +9,7 @@ MVP funcional construido en 4 fases. No es un boilerplate genérico.
 ## Stack exacto
 - **Frontend**: Next.js 15 App Router + TypeScript strict
 - **Auth + DB**: Supabase (`@supabase/ssr`) con RLS en todas las tablas
-- **Embeddings**: Ollama `nomic-embed-text` → 768 dimensiones (archivo `src/lib/ai/voyage.ts`, nombre histórico)
+- **Embeddings**: Voyage AI `voyage-3-lite` → 512 dimensiones (archivo `src/lib/ai/voyage.ts`)
 - **Chat**: Groq `llama-3.3-70b-versatile` / Ollama (intercambiable via `CHAT_PROVIDER`)
 - **UI**: Tailwind CSS v4 + shadcn/ui + @dnd-kit
 
@@ -45,14 +45,14 @@ src/
     (dashboard)/        ← board, chat — con sidebar + topbar
     api/
       chat/             ← streaming SSE, runtime: nodejs
-      embed/            ← requiere HMAC, usa service_role; excluida de middleware auth
+      embed/            ← requiere HMAC, usa service_role; excluida de middleware auth (junto con api/backfill)
   actions/              ← "use server", siempre validar con Zod antes de tocar Supabase
   lib/
     supabase/
       client.ts         ← createBrowserClient (solo en 'use client')
       server.ts         ← createServerClient con cookies() — nuevo en cada request
     ai/
-      voyage.ts         ← generateEmbedding / generateQueryEmbedding — usa Ollama nomic-embed-text
+      voyage.ts         ← generateEmbedding / generateQueryEmbedding — usa Voyage AI voyage-3-lite (512 dims)
       chat.ts           ← getChatProvider() → GroqProvider | OllamaProvider
       rag.ts            ← searchTasksByQuery → buildContextBlock → buildSystemPrompt
     hmac.ts             ← verifyHmacRequest / signRequest (protege api/embed)
@@ -84,9 +84,9 @@ El parse difiere según proveedor: Ollama envía JSON por línea; Groq usa el fo
 
 ## Funciones SQL críticas (migrations/004)
 Dos funciones `SECURITY DEFINER` en Supabase — no modificar sin entender sus implicaciones de seguridad.
-Las migraciones en repo declaran `halfvec(1024)` pero **deben corregirse a `halfvec(768)`** antes de `supabase db push` (ver advertencia de dimensiones abajo):
-- `search_tasks_by_embedding(query_embedding halfvec(768), match_threshold, match_count)` — accesible para `authenticated`; filtra por `auth.uid()` internamente.
-- `upsert_task_embedding(p_task_id, p_user_id, p_embedding halfvec(768), p_content_hash)` — solo `service_role`; hace upsert condicional (solo si `content_hash` cambió).
+Las migraciones en repo declaran `halfvec(1024)` pero **deben corregirse a `halfvec(512)`** antes de `supabase db push` (ver advertencia de dimensiones abajo):
+- `search_tasks_by_embedding(query_embedding halfvec(512), match_threshold, match_count)` — accesible para `authenticated`; filtra por `auth.uid()` internamente.
+- `upsert_task_embedding(p_task_id, p_user_id, p_embedding halfvec(512), p_content_hash)` — solo `service_role`; hace upsert condicional (solo si `content_hash` cambió).
 
 ## Variables de entorno requeridas
 ```env
@@ -94,6 +94,7 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 GROQ_API_KEY=
+VOYAGE_API_KEY=               # requerida para embeddings (voyage-3-lite)
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama3.2
 CHAT_PROVIDER=groq            # 'groq' | 'ollama'
@@ -101,15 +102,13 @@ EMBED_INTERNAL_SECRET=        # mínimo 32 chars aleatorios
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-> `VOYAGE_API_KEY` ya no es necesaria — los embeddings se generan con Ollama (`nomic-embed-text`).
-
 ## Advertencia: mismatch de dimensiones
-Las migraciones SQL (`003_embeddings.sql` y `004_rls_policies.sql`) declaran `halfvec(1024)` (diseñadas para Voyage AI), pero `voyage.ts` genera vectores de **768 dimensiones** con `nomic-embed-text`. Antes de ejecutar `supabase db push` en un entorno nuevo, cambiar `halfvec(1024)` → `halfvec(768)` en ambos archivos de migración y en las firmas de las funciones SQL.
+Las migraciones SQL (`003_embeddings.sql` y `004_rls_policies.sql`) declaran `halfvec(1024)` (diseñadas para `voyage-3.5`), pero `voyage.ts` usa `voyage-3-lite` que genera vectores de **512 dimensiones**. Antes de ejecutar `supabase db push` en un entorno nuevo, cambiar `halfvec(1024)` → `halfvec(512)` en ambos archivos de migración y en las firmas de las funciones SQL.
 
 ## Errores comunes y solución
 - **`cookies() should be awaited`**: en Next.js 15, `cookies()` es async. Usar `await cookies()`.
 - **RLS silencioso**: Supabase no lanza error en SELECT bloqueado — retorna array vacío. Verificar con service_role.
-- **Ollama no responde**: verificar que `ollama serve` esté corriendo y que `nomic-embed-text` esté descargado (`ollama pull nomic-embed-text`). El runtime de `api/chat` debe ser `nodejs`, no `edge`.
+- **Ollama no responde**: solo aplica cuando `CHAT_PROVIDER=ollama`. Verificar que `ollama serve` esté corriendo y que el modelo de chat esté descargado. El runtime de `api/chat` debe ser `nodejs`, no `edge`. Los embeddings usan Voyage AI, no Ollama.
 - **Flash de tema**: el script inline en `app/layout.tsx` lo previene. No mover a useEffect.
 - **HMAC rechazado**: las firmas tienen ventana de 5 minutos. Verificar que `EMBED_INTERNAL_SECRET` coincida entre el proceso que firma y el que verifica.
 - **Cookies de auth perdidas en middleware**: `middleware.ts` debe devolver `supabaseResponse` (no `NextResponse.next()`); de lo contrario, Supabase no puede refrescar la sesión.
@@ -134,10 +133,3 @@ vercel env pull .env.local         # sincronizar variables desde Vercel
 vercel --prod                      # deploy a producción
 ```
 
-## Commands
-- Test: `npm test`
-- Test single file: `npx vitest run src/actions/__tests__/tasks.test.ts`
-- Test watch: `npm run test:watch`
-- E2E: `npm run test:e2e`
-- Lint: `npm run lint`
-- Type check: `npx tsc --noEmit`

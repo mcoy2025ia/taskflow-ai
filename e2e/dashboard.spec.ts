@@ -2,19 +2,11 @@ import { test, expect, type Page } from '@playwright/test'
 
 // storageState is provided by playwright.config.ts (chromium project)
 
-/**
- * Clicks the + button in a Kanban column header.
- *
- * @base-ui/react Dialog.Trigger renders TWO button elements when using asChild:
- *   1. An invisible trigger relay (data-slot="dialog-trigger", data-base-ui-click-trigger)
- *   2. The visible Button component (data-slot="button")
- * We must target the visible one to avoid strict-mode violations.
- */
 async function clickAddButton(page: Page, columnName: string) {
   await page
     .getByRole('heading', { name: columnName })
     .locator('xpath=../..')
-    .locator('[data-slot="button"]')
+    .getByRole('button', { name: 'Agregar tarea' })
     .click()
 }
 

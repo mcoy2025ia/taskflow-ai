@@ -1,6 +1,6 @@
 'use client'
 
-import { useOptimistic, useTransition } from 'react'
+import { useOptimistic, useTransition, useMemo, useCallback } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -67,27 +67,28 @@ export function KanbanBoard({ initialTasks }: BoardProps) {
     })
   )
 
-  // Agrupar tareas optimistas en columnas
-  const columns: KanbanColumnType[] = COLUMNS.map(col => ({
-    id: col.id,
-    title: col.label,
-    tasks: optimisticTasks
-      .filter(t => t.status === col.id)
-      .sort((a, b) => a.position - b.position),
-  }))
+  const columns = useMemo<KanbanColumnType[]>(() =>
+    COLUMNS.map(col => ({
+      id: col.id,
+      title: col.label,
+      tasks: optimisticTasks
+        .filter(t => t.status === col.id)
+        .sort((a, b) => a.position - b.position),
+    })),
+    [optimisticTasks]
+  )
 
-  function handleDragStart(event: DragStartEvent) {
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     const task = optimisticTasks.find(t => t.id === event.active.id)
     setActiveTask(task ?? null)
-  }
+  }, [optimisticTasks])
 
-  function handleDragEnd(event: DragEndEvent) {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
     setActiveTask(null)
 
     if (!over || active.id === over.id) return
 
-    // Determinar la columna destino
     const overId = over.id as string
     const targetStatus = (
       COLUMNS.find(c => c.id === overId)?.id ??
@@ -99,7 +100,7 @@ export function KanbanBoard({ initialTasks }: BoardProps) {
     const movedTask = optimisticTasks.find(t => t.id === active.id)
     if (!movedTask) return
 
-    // Calcular nueva posición (espaciado de 1000 para inserciones futuras)
+    // Position calculation runs synchronously — O(n) on ~20 tasks, negligible.
     const targetTasks = optimisticTasks
       .filter(t => t.status === targetStatus && t.id !== movedTask.id)
       .sort((a, b) => a.position - b.position)
@@ -114,7 +115,6 @@ export function KanbanBoard({ initialTasks }: BoardProps) {
     const newPosition = Math.round((prevPos + nextPos) / 2)
 
     startTransition(async () => {
-      // 1. Actualizar UI instantáneamente
       applyOptimisticMove({
         type: 'MOVE_TASK',
         taskId: movedTask.id,
@@ -122,19 +122,17 @@ export function KanbanBoard({ initialTasks }: BoardProps) {
         newPosition,
       })
 
-      // 2. Sincronizar con servidor en background
       const result = await moveTask({
         id: movedTask.id,
         status: targetStatus,
         position: newPosition,
       })
 
-      // 3. Si falla, useOptimistic revierte automáticamente
       if (!result.success) {
         toast.error(result.error)
       }
     })
-  }
+  }, [optimisticTasks, startTransition, applyOptimisticMove])
 
   return (
     <DndContext

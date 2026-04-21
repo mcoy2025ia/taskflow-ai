@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect} from 'react'
+import { useState, useRef, useEffect, useTransition } from 'react'
 import { Send, Bot, User} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +25,7 @@ interface Message {
 
 
 export function ChatInterface() {
+  const [, startTransition] = useTransition()
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -35,10 +36,24 @@ export function ChatInterface() {
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  // Track whether user is near the bottom — if they scrolled up, don't hijack.
+  const isNearBottomRef = useRef(true)
+
+  function handleScroll() {
+    const el = scrollContainerRef.current
+    if (!el) return
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+  }
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (!isNearBottomRef.current) return
+    // rAF avoids forcing a synchronous layout on every token commit.
+    const raf = requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    })
+    return () => cancelAnimationFrame(raf)
   }, [messages])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -103,13 +118,17 @@ export function ChatInterface() {
 
             if (data.type === 'token') {
               accumulated += data.content
-              setMessages(prev =>
-                prev.map(m =>
-                  m.id === assistantId
-                    ? { ...m, content: accumulated }
-                    : m
+              // startTransition marks token renders as non-urgent so user
+              // input (typing, clicking) is never blocked by streaming updates.
+              startTransition(() => {
+                setMessages(prev =>
+                  prev.map(m =>
+                    m.id === assistantId
+                      ? { ...m, content: accumulated }
+                      : m
+                  )
                 )
-              )
+              })
             } else if (data.type === 'sources') {
               sources = data.sources
             }
@@ -142,7 +161,11 @@ export function ChatInterface() {
   return (
     <div className="flex flex-col h-full max-w-2xl mx-auto">
       {/* Historial */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+      >
         {messages.map(message => (
           <div
             key={message.id}

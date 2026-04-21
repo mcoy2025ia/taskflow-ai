@@ -23,7 +23,9 @@
       "Bash(npm run *)",
       "Bash(vercel logs *)",
       "Bash(vercel build *)",
-      "Bash(vercel pull *)"
+      "Bash(vercel pull *)",
+      "Bash(npx vitest *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

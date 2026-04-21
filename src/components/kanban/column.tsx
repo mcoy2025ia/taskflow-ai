@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { cn } from '@/lib/utils'
@@ -13,7 +14,7 @@ interface ColumnProps {
   isPending: boolean
 }
 
-export function KanbanColumn({ column, colorClass, isPending }: ColumnProps) {
+export const KanbanColumn = memo(function KanbanColumn({ column, colorClass, isPending }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
 
   return (
@@ -62,4 +63,4 @@ export function KanbanColumn({ column, colorClass, isPending }: ColumnProps) {
       </div>
     </div>
   )
-}
+})

@@ -49,7 +49,7 @@ const { register, handleSubmit, reset, formState: { errors } } = useForm<any>({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {/* ✅ Si asChild daba error de tipos, nos aseguramos que Button sea el único hijo directo */}
-      <DialogTrigger className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-muted/60 h-7 w-7 text-muted-foreground">
+      <DialogTrigger render={<Button variant="ghost" size="icon-sm" className="text-muted-foreground" aria-label="Agregar tarea" />}>
         <Plus size={14} />
       </DialogTrigger>
       

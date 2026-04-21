@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/supabase/get-user'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import type { ReactNode } from 'react'
@@ -9,12 +10,12 @@ interface DashboardLayoutProps {
 }
 
 export default async function DashboardLayout({ children }: DashboardLayoutProps) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
+  const user = await getAuthUser()
   if (!user) redirect('/login')
 
-  // Cargar perfil del usuario para el sidebar
+  // Parallelize profile fetch alongside page data (page also runs getAuthUser,
+  // but cache() ensures only one network call is made for the whole request).
+  const supabase = await createClient()
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, avatar_url')

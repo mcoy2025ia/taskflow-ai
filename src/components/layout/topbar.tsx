@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -26,14 +26,15 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
 
 export function Topbar() {
   const pathname = usePathname()
-  const [isDark, setIsDark] = useState(false)
+  // Read synchronously during init — the inline script in layout.tsx already
+  // applied the class before first paint, so this matches without a useEffect.
+  const [isDark, setIsDark] = useState(() =>
+    typeof window !== 'undefined'
+      ? document.documentElement.classList.contains('dark')
+      : false
+  )
 
   const meta = PAGE_META[pathname] ?? { title: 'TaskFlow AI', sub: '' }
-
-  // Sincronizar con clase dark del documento
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains('dark'))
-  }, [])
 
   function toggleTheme() {
     const html = document.documentElement

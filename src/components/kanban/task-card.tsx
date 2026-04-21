@@ -1,6 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
+import { memo, useTransition } from 'react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,9 @@ import { Trash2, Calendar, GripVertical } from 'lucide-react'
 import { deleteTask } from '@/actions/task.actions'
 import { toast } from 'sonner'
 import type { Task } from '@/types/app.types'
+
+// Module-level singleton — avoids re-creating the formatter on every render
+const dueDateFormatter = new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short' })
 
 const PRIORITY_CONFIG = {
   low:    { label: 'Baja',  class: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
@@ -20,7 +23,7 @@ interface TaskCardProps {
   isOverlay?: boolean
 }
 
-export function TaskCard({ task, isOverlay = false }: TaskCardProps) {
+export const TaskCard = memo(function TaskCard({ task, isOverlay = false }: TaskCardProps) {
   const [isPending, startTransition] = useTransition()
   const priority = PRIORITY_CONFIG[task.priority]
 
@@ -68,10 +71,7 @@ export function TaskCard({ task, isOverlay = false }: TaskCardProps) {
             {task.due_date && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Calendar size={10} />
-                {new Date(task.due_date).toLocaleDateString('es-CO', {
-                  day: '2-digit',
-                  month: 'short',
-                })}
+                {dueDateFormatter.format(new Date(task.due_date))}
               </span>
             )}
             <Button
@@ -87,4 +87,4 @@ export function TaskCard({ task, isOverlay = false }: TaskCardProps) {
       </div>
     </div>
   )
-}
+})
