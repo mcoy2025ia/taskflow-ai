@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
             }
           }
         }
-      } catch (error) {
+      } catch { // <--- CORREGIDO: Sin paréntesis
         const errPayload = JSON.stringify({ type: 'error', message: 'Stream interrupted' })
         controller.enqueue(encoder.encode(`data: ${errPayload}\n\n`))
       } finally {

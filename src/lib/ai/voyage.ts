@@ -1,6 +1,6 @@
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? "http://localhost:11434"
 const MODEL = "nomic-embed-text"
-const DIMENSIONS = 768
+
 
 async function embed(text: string): Promise<number[]> {
   const cleaned = text.trim().replace(/\s+/g, " ").slice(0, 8000)

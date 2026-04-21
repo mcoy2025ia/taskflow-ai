@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect, useTransition } from 'react'
-import { Send, Bot, User, ExternalLink } from 'lucide-react'
+import { useState, useRef, useEffect} from 'react'
+import { Send, Bot, User} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -22,9 +22,7 @@ interface Message {
   isStreaming?: boolean
 }
 
-const STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: 'Por hacer', in_progress: 'En progreso', done: 'Completado',
-}
+
 
 export function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([

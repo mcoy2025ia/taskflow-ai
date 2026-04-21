@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image' // <--- ESTA ES LA LÍNEA QUE FALTA
 import { usePathname } from 'next/navigation'
-import { useTransition } from 'react'
+import { useTransition, type ReactNode, type ElementType } from 'react'
+// ... resto de tus imports (lucide-react, cn, etc.)
 import {
   LayoutDashboard,
   MessageSquareText,
@@ -108,11 +110,15 @@ export function Sidebar({ userName, userEmail, userInitials, avatarUrl }: Sideba
         <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-[7px] hover:bg-muted/60 transition-colors group">
           {/* Avatar */}
           {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={userName}
-              className="w-7 h-7 rounded-full object-cover flex-shrink-0"
-            />
+            <div className="relative w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
+              <Image 
+                src={avatarUrl} 
+                alt={userName}
+                width={28}  // ✅ Ajustado a w-7 (28px)
+                height={28} // ✅ Ajustado a h-7 (28px)
+                className="object-cover"
+              />
+            </div>
           ) : (
             <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-950/50 flex items-center justify-center flex-shrink-0">
               <span className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
@@ -159,8 +165,6 @@ function NavSection({ label, children }: { label: string; children: ReactNode })
     </div>
   )
 }
-
-import type { ReactNode, ElementType } from 'react'
 
 function NavItem({
   href,
