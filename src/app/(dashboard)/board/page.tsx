@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
-import nextDynamic from 'next/dynamic'
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getAuthUser } from '@/lib/supabase/get-user'
 import { KanbanSkeleton } from '@/components/kanban/skeleton'
+import { KanbanBoardDynamic } from '@/components/kanban/board-dynamic'
 import type { Task } from '@/types/app.types'
 
 export const dynamic = 'force-dynamic'
@@ -13,13 +13,6 @@ export const metadata: Metadata = {
   title: 'Mi tablero',
   description: 'Organiza tus tareas con drag-and-drop y busca en lenguaje natural con el asistente IA.',
 }
-
-// @dnd-kit (~60 KB) is excluded from the initial bundle — loaded lazily after
-// the shell HTML is painted. ssr:false is correct: drag-and-drop is client-only.
-const KanbanBoard = nextDynamic(
-  () => import('@/components/kanban/board').then(m => m.KanbanBoard),
-  { ssr: false, loading: () => <KanbanSkeleton /> }
-)
 
 async function BoardTasks() {
   const user = await getAuthUser()
@@ -36,7 +29,7 @@ async function BoardTasks() {
     console.error('[board] Error al cargar tareas:', error)
   }
 
-  return <KanbanBoard initialTasks={(tasks as Task[]) ?? []} />
+  return <KanbanBoardDynamic initialTasks={(tasks as Task[]) ?? []} />
 }
 
 export default function BoardPage() {

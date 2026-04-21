@@ -1,19 +1,13 @@
 import type { Metadata } from 'next'
-import dynamic from 'next/dynamic'
 import { redirect } from 'next/navigation'
 import { getAuthUser } from '@/lib/supabase/get-user'
+import { ChatInterfaceDynamic } from '@/components/chat/chat-dynamic'
 import { MessageSquareText } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Asistente RAG',
   description: 'Busca y analiza tus tareas con lenguaje natural usando el asistente de inteligencia artificial.',
 }
-
-// ChatInterface (~500 lines, EventSource) is client-only — defer from initial bundle
-const ChatInterface = dynamic(
-  () => import('@/components/chat/chat-interface').then(m => m.ChatInterface),
-  { ssr: false }
-)
 
 export default async function ChatPage() {
   const user = await getAuthUser()
@@ -30,7 +24,7 @@ export default async function ChatPage() {
           </p>
         </div>
       </div>
-      <ChatInterface />
+      <ChatInterfaceDynamic />
     </main>
   )
 }
