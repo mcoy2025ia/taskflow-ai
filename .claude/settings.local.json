@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx playwright *)",
+      "Bash(node -e \"require.resolve\\('playwright'\\)\")",
+      "Bash(node -e \"require.resolve\\('@playwright/test'\\)\")",
+      "Bash(npm root *)",
+      "Bash(xargs -I{} ls {})",
+      "Bash(node -e \"const {execSync}=require\\('child_process'\\); console.log\\(execSync\\('npm list -g playwright 2>/dev/null || npx --yes playwright@latest --version'\\).toString\\(\\)\\)\")",
+      "Read(//c/Users/USUARIO/AppData/Local/**)",
+      "Bash(node -e \"const p = require.resolve; try { console.log\\(p\\('playwright', {paths: ['C:/Users/USUARIO/AppData/Local/npm-cache/_npx']}\\)\\) } catch\\(e\\) { console.log\\('not found'\\); }\")",
+      "Read(//c/Users/USUARIO/**)",
+      "Bash(node demo.cjs)",
+      "Bash(gh issue *)",
+      "Bash(where gh *)",
+      "Bash(winget list *)",
+      "Bash(cmd *)",
+      "Bash(powershell *)",
+      "Bash(/c/Program Files/GitHub CLI/gh.exe issue *)",
+      "Bash(/c/Program Files/GitHub CLI/gh.exe auth *)",
+      "Bash(npm install *)",
+      "Bash(npm test *)",
+      "Bash(npm run *)"
+    ]
+  }
+}
