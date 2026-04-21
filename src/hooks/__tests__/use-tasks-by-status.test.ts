@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useTasksByStatus } from '../use-tasks-by-status'
-import type { Task } from '@/types/app.types'
+import type { Task, TaskStatus } from '@/types/app.types' // ✅ Importamos TaskStatus
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -54,10 +54,16 @@ describe('useTasksByStatus', () => {
 
   it('returns the same reference when inputs do not change (memoization)', () => {
     const tasks = [makeTask({ id: '1', status: 'todo' })]
+    // ✅ Definimos el tipo de las props explícitamente para el hook
     const { result, rerender } = renderHook(
-      ({ t, s }: { t: Task[]; s: 'todo' | 'in_progress' | 'done' }) =>
+      ({ t, s }: { t: Task[]; s: TaskStatus }) =>
         useTasksByStatus(t, s),
-      { initialProps: { t: tasks, s: 'todo' as const } }
+      { 
+        initialProps: { 
+          t: tasks, 
+          s: 'todo' as TaskStatus // ✅ Usamos cast a TaskStatus en lugar de as const
+        } 
+      }
     )
     const first = result.current
     rerender({ t: tasks, s: 'todo' })
@@ -69,13 +75,19 @@ describe('useTasksByStatus', () => {
       makeTask({ id: '1', status: 'todo' }),
       makeTask({ id: '2', status: 'done' }),
     ]
+    // ✅ Tipamos la prop 's' como TaskStatus para que acepte cualquier estado en el rerender
     const { result, rerender } = renderHook(
-      ({ s }: { s: 'todo' | 'in_progress' | 'done' }) => useTasksByStatus(tasks, s),
-      { initialProps: { s: 'todo' as const } }
+      ({ s }: { s: TaskStatus }) => useTasksByStatus(tasks, s),
+      { 
+        initialProps: { 
+          s: 'todo' as TaskStatus // ✅ Correcto: permite cambios posteriores
+        } 
+      }
     )
     expect(result.current).toHaveLength(1)
     expect(result.current[0].id).toBe('1')
 
+    // ✅ Ahora este rerender ya no dará error de tipos
     rerender({ s: 'done' })
     expect(result.current).toHaveLength(1)
     expect(result.current[0].id).toBe('2')

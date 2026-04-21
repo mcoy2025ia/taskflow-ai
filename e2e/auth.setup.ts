@@ -59,7 +59,7 @@ setup('autenticar usuario de prueba', async ({ page }) => {
     
     // Intentamos capturar el mensaje de error que muestra tu app (Toast o Alert)
     const errorText = await page.getByRole('alert').textContent().catch(() => 'No hay mensaje de error visible en pantalla')
-    console.log('📝 Mensaje detectado en la UI:', errorText.trim())
+    console.log('📝 Mensaje detectado en la UI:', errorText?.trim() ?? 'Sin mensaje de error')
     
     throw new Error(`Fallo en la autenticación. Revisa que el usuario ${email} sea correcto y tenga la confirmación de email desactivada en Supabase.`)
   }
