@@ -4,8 +4,18 @@ import { Toaster } from 'sonner'
 import './globals.css'
 import { cn } from "@/lib/utils"
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
-const geistMono = Geist_Mono({ variable: '--font-mono', subsets: ['latin'] })
+const geist = Geist({ 
+  subsets: ['latin'], 
+  variable: '--font-sans',
+  display: 'swap',
+  preload: true,
+})
+const geistMono = Geist_Mono({ 
+  variable: '--font-mono', 
+  subsets: ['latin'],
+  display: 'swap',
+  preload: false, // mono solo se usa en código, no en ruta crítica
+})
 
 export const metadata: Metadata = {
   title: {
