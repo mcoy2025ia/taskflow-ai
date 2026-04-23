@@ -2,10 +2,16 @@ import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
   experimental: {
-    // Only bundle the icons/components actually imported from these packages.
-    // lucide-react has 1500+ icons; without this flag the whole package goes
-    // into the initial bundle even if only 10 icons are used.
-    optimizePackageImports: ['lucide-react', '@base-ui/react'],
+    // Solo incluye en el bundle lo que realmente usas
+    optimizePackageImports: [
+      'lucide-react',
+      '@base-ui/react',
+      '@dnd-kit/core',
+      '@dnd-kit/sortable',
+      '@dnd-kit/utilities',
+      'sonner',
+      'next-themes',
+    ],
   },
 }
 
