@@ -22,15 +22,15 @@ function detectStructuralIntent(query: string): StructuralIntent {
   const q = query.toLowerCase()
   const intent: StructuralIntent = {}
 
-  // Estado
+  // Estado — orden importa: más específico primero
   if (/en progreso|en curso|trabajando|activ/.test(q)) intent.status = 'in_progress'
-  else if (/pendiente|por hacer|sin empezar|backlog/.test(q)) intent.status = 'todo'
-  else if (/complet|termin|hech|done|listo/.test(q)) intent.status = 'done'
+  else if (/por hacer|para hacer|pendiente|sin empezar|backlog|que me falta|que falta/.test(q)) intent.status = 'todo'
+  else if (/complet|termin|hech|done|listo|finaliz/.test(q)) intent.status = 'done'
 
   // Prioridad
-  if (/urgent|críti|alta prioridad|importante/.test(q)) intent.priority = 'high'
-  else if (/media|normal/.test(q)) intent.priority = 'medium'
-  else if (/baja|low/.test(q)) intent.priority = 'low'
+  if (/urgent|críti|alta prioridad|prioridad alta|importante/.test(q)) intent.priority = 'high'
+  else if (/media|prioridad media|normal/.test(q)) intent.priority = 'medium'
+  else if (/baja|prioridad baja|low/.test(q)) intent.priority = 'low'
 
   return intent
 }
