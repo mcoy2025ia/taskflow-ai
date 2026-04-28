@@ -189,7 +189,42 @@ export function buildContextBlock(tasks: TaskSearchResult[]): string {
     .join('\n\n')
 }
 
-export function buildSystemPrompt(contextBlock: string, voiceMode = false): string {
+// ─── Resumen global del proyecto ──────────────────────────────────────────────
+
+export interface ProjectSummary {
+  total: number
+  done: number
+  in_progress: number
+  todo: number
+  overdue: number
+  daysLeft: number
+  deliveryDate: string
+}
+
+export async function getProjectSummary(userId: string): Promise<ProjectSummary> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('tasks')
+    .select('status, due_date')
+    .eq('user_id', userId)
+
+  const tasks = data ?? []
+  const now = new Date()
+  const deliveryDate = new Date('2025-05-12')
+  const daysLeft = Math.ceil((deliveryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+  return {
+    total: tasks.length,
+    done: tasks.filter(t => t.status === 'done').length,
+    in_progress: tasks.filter(t => t.status === 'in_progress').length,
+    todo: tasks.filter(t => t.status === 'todo').length,
+    overdue: tasks.filter(t => t.due_date && new Date(t.due_date) < now && t.status !== 'done').length,
+    daysLeft: Math.max(0, daysLeft),
+    deliveryDate: deliveryDate.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }),
+  }
+}
+
+export function buildSystemPrompt(contextBlock: string, voiceMode = false, project?: ProjectSummary): string {
   const formatInstructions = voiceMode
     ? `MODO VOZ ACTIVO:
 - Responde en máximo 2-3 oraciones cortas.
@@ -205,6 +240,17 @@ export function buildSystemPrompt(contextBlock: string, voiceMode = false): stri
 
   return `Eres TaskFlow AI, un asistente de productividad inteligente integrado en un tablero Kanban.
 Tu rol es ayudar al usuario a gestionar sus tareas usando lenguaje natural.
+
+${project ? `
+RESUMEN DEL PROYECTO:
+- Total de tareas: ${project.total}
+- Completadas: ${project.done} (${Math.round(project.done / project.total * 100)}%)
+- En progreso: ${project.in_progress}
+- Por hacer: ${project.todo}
+- Vencidas sin completar: ${project.overdue}
+- Días restantes hasta entrega (${project.deliveryDate}): ${project.daysLeft}
+- Velocidad requerida: ${project.daysLeft > 0 ? ((project.in_progress + project.todo) / project.daysLeft).toFixed(1) : 'N/A'} tareas/día
+` : ''}
 
 TAREAS RELEVANTES:
 ${contextBlock}

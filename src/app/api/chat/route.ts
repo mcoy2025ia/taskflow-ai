@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getChatProvider } from '@/lib/ai/chat'
-import { searchTasksByQuery, buildContextBlock, buildSystemPrompt } from '@/lib/ai/rag'
+import { searchTasksByQuery, buildContextBlock, buildSystemPrompt, getProjectSummary } from '@/lib/ai/rag'
 import type { ChatMessage } from '@/lib/ai/chat'
 
 export const runtime = 'nodejs' // Ollama requiere Node.js runtime (no edge)
@@ -32,8 +32,11 @@ export async function POST(request: NextRequest) {
     userId: user.id,
   })
 
-  const contextBlock = buildContextBlock(relevantTasks)
-  const systemPrompt = buildSystemPrompt(contextBlock, voiceMode)
+  const [contextBlock, projectSummary] = await Promise.all([
+    Promise.resolve(buildContextBlock(relevantTasks)),
+    getProjectSummary(user.id),
+  ])
+  const systemPrompt = buildSystemPrompt(contextBlock, voiceMode, projectSummary)
 
   // 2. Construir historial de mensajes para el LLM
   const messages: ChatMessage[] = [
