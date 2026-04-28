@@ -54,12 +54,17 @@ export default function AnalyticsPage() {
   const pct = Math.round(done / total * 100)
 
   const today = new Date()
+  today.setHours(0, 0, 0, 0)
   const delivery = new Date('2025-05-12')
+  delivery.setHours(0, 0, 0, 0)
   const daysLeft = Math.max(0, Math.ceil((delivery.getTime() - today.getTime()) / 86400000))
   const pending = inProgress + todo
   const velocityRequired = daysLeft > 0 ? (pending / daysLeft).toFixed(1) : 'N/A'
-  const velocityActual = (done / 60).toFixed(1) // 60 días transcurridos
-  const atRisk = parseFloat(velocityRequired) > parseFloat(velocityActual)
+  const projectStartDate = new Date('2025-02-27')
+  projectStartDate.setHours(0, 0, 0, 0)
+  const daysElapsed = Math.ceil((today.getTime() - projectStartDate.getTime()) / 86400000)
+  const velocityActual = daysElapsed > 0 ? (done / daysElapsed).toFixed(1) : '0'
+  const atRisk = daysLeft > 0 && parseFloat(velocityRequired) > parseFloat(velocityActual)
 
   // Burndown
   const burndown = WEEKS.map(w => {
