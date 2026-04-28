@@ -22,8 +22,11 @@ export async function POST(request: NextRequest) {
 
   const pct = Math.round(summary.done / summary.total * 100)
   const pending = summary.in_progress + summary.todo
-  const totalDays = 75
-  const daysElapsed = totalDays - summary.daysLeft
+  const startUTC = new Date(Date.UTC(2025, 1, 27))
+  const endUTC   = new Date(Date.UTC(2025, 4, 12))
+  const nowUTC   = new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()))
+  const totalDays   = Math.floor((endUTC.getTime() - startUTC.getTime()) / 86400000)
+  const daysElapsed = Math.min(totalDays, Math.max(1, Math.floor((nowUTC.getTime() - startUTC.getTime()) / 86400000)))
   const timePct = Math.round((daysElapsed / totalDays) * 100)
   const weeksElapsed = Math.max(1, Math.floor(daysElapsed / 7))
   const velocityActual = (summary.done / Math.max(1, daysElapsed)).toFixed(2)
