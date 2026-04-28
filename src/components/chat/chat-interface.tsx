@@ -7,6 +7,24 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import type { TaskStatus } from '@/types/app.types'
 
+interface SpeechRecognitionInstance {
+  lang: string
+  continuous: boolean
+  interimResults: boolean
+  onstart: (() => void) | null
+  onresult: ((event: SpeechRecognitionResultEvent) => void) | null
+  onerror: (() => void) | null
+  onend: (() => void) | null
+  start: () => void
+  stop: () => void
+}
+
+interface SpeechRecognitionResultEvent {
+  results: { [index: number]: { [index: number]: { transcript: string } } }
+}
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance
+
 interface Source {
   task_id: string
   title: string
@@ -38,7 +56,7 @@ export function ChatInterface() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
   const isNearBottomRef = useRef(true)
   const submitRef = useRef<(() => void) | null>(null)
 
@@ -57,9 +75,8 @@ export function ChatInterface() {
   }, [messages])
 
   function startVoiceInput() {
-    const SpeechRecognitionAPI =
-      window.SpeechRecognition ||
-      (window as unknown as { webkitSpeechRecognition: typeof window.SpeechRecognition }).webkitSpeechRecognition
+    const w = window as unknown as { SpeechRecognition?: SpeechRecognitionConstructor; webkitSpeechRecognition?: SpeechRecognitionConstructor }
+    const SpeechRecognitionAPI = w.SpeechRecognition || w.webkitSpeechRecognition
 
     if (!SpeechRecognitionAPI) {
       alert('Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.')
@@ -79,7 +96,7 @@ export function ChatInterface() {
 
     recognition.onstart = () => setIsListening(true)
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: SpeechRecognitionResultEvent) => {
       const transcript = event.results[0][0].transcript
       setVoiceMode(true)
       setInput(transcript)
