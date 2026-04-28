@@ -8,6 +8,7 @@ import { useTransition, type ReactNode, type ElementType } from 'react'
 import {
   LayoutDashboard,
   MessageSquareText,
+  BarChart2,
   Settings,
   Cpu,
   LogOut,
@@ -36,6 +37,12 @@ const NAV_MAIN = [
     label: 'Asistente IA',
     icon: MessageSquareText,
     testId: 'nav-chat',
+  },
+  {
+    href: '/analytics',
+    label: 'Analítica',
+    icon: BarChart2,
+    testId: 'nav-analytics',
   },
 ]
 
