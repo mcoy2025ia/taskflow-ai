@@ -105,7 +105,22 @@ export default function AnalyticsPage() {
       const { default: html2canvas } = await import('html2canvas')
       const { default: jsPDF } = await import('jspdf')
 
-      const canvas = await html2canvas(dashboardRef.current, { scale: 2, useCORS: true })
+      const canvas = await html2canvas(dashboardRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        onclone: (clonedDoc) => {
+          // html2canvas no soporta oklch() ni lab() — Tailwind v4 los usa en los <style> tags.
+          // Reemplazamos con hex neutro para evitar el crash en el parser de colores.
+          clonedDoc.querySelectorAll('style').forEach(el => {
+            if (el.textContent) {
+              el.textContent = el.textContent
+                .replace(/oklch\([^)]+\)/g, '#888888')
+                .replace(/lab\([^)]+\)/g, '#888888')
+            }
+          })
+        },
+      })
       const imgData = canvas.toDataURL('image/png')
 
       // 3. Ensamblar PDF
