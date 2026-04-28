@@ -72,7 +72,7 @@ export default function AnalyticsPage() {
   })
 
   // Distribución real por estado
-  const phaseReal: PhaseData[] = [
+  const phaseReal = [
     { name: 'Bronze (6)', total: 6, done: 6, pct: 100, color: '#cd7f32' },
     { name: 'Silver (6)', total: 6, done: 6, pct: 100, color: '#94a3b8' },
     { name: 'Gold (3)', total: 3, done: 0, pct: 0, color: '#f59e0b' },
