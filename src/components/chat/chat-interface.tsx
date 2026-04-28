@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useTransition } from 'react'
-import { Send, Bot, User} from 'lucide-react'
+import { Send, Bot, User, Mic, MicOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -22,24 +22,25 @@ interface Message {
   isStreaming?: boolean
 }
 
-
-
 export function ChatInterface() {
   const [, startTransition] = useTransition()
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
       role: 'assistant',
-      content: '¡Hola! Soy TaskFlow AI. Puedes preguntarme sobre tus tareas en lenguaje natural. Por ejemplo: *"¿Qué tareas urgentes tengo pendientes?"* o *"Muéstrame las tareas de diseño"*.',
+      content: '¡Hola! Soy TaskFlow AI. Puedes escribirme o hablarme por voz 🎤. Por ejemplo: *"¿Qué tareas urgentes tengo pendientes?"* o *"¿Cómo va el proyecto?"*.',
     }
   ])
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
+  const [isListening, setIsListening] = useState(false)
+  const [voiceMode, setVoiceMode] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
-  // Track whether user is near the bottom — if they scrolled up, don't hijack.
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
   const isNearBottomRef = useRef(true)
+  const submitRef = useRef<(() => void) | null>(null)
 
   function handleScroll() {
     const el = scrollContainerRef.current
@@ -49,28 +50,73 @@ export function ChatInterface() {
 
   useEffect(() => {
     if (!isNearBottomRef.current) return
-    // rAF avoids forcing a synchronous layout on every token commit.
     const raf = requestAnimationFrame(() => {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     })
     return () => cancelAnimationFrame(raf)
   }, [messages])
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!input.trim() || isStreaming) return
+  function startVoiceInput() {
+    const SpeechRecognitionAPI =
+      window.SpeechRecognition ||
+      (window as unknown as { webkitSpeechRecognition: typeof window.SpeechRecognition }).webkitSpeechRecognition
 
-    const userMessage = input.trim()
+    if (!SpeechRecognitionAPI) {
+      alert('Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.')
+      return
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop()
+      setIsListening(false)
+      return
+    }
+
+    const recognition = new SpeechRecognitionAPI()
+    recognition.lang = 'es-CO'
+    recognition.continuous = false
+    recognition.interimResults = false
+
+    recognition.onstart = () => setIsListening(true)
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const transcript = event.results[0][0].transcript
+      setVoiceMode(true)
+      setInput(transcript)
+      // submitRef permite disparar el submit después de que React actualice el estado
+      submitRef.current = () => sendMessage(transcript, true)
+    }
+
+    recognition.onerror = () => {
+      setIsListening(false)
+      setVoiceMode(false)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+      if (submitRef.current) {
+        const fn = submitRef.current
+        submitRef.current = null
+        setTimeout(fn, 100)
+      }
+    }
+
+    recognitionRef.current = recognition
+    recognition.start()
+  }
+
+  async function sendMessage(text: string, isVoice = false) {
+    if (!text.trim() || isStreaming) return
+
+    const userMessage = text.trim()
     setInput('')
 
-    // Añadir mensaje del usuario
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
       content: userMessage,
     }
 
-    // Placeholder del asistente con streaming indicator
     const assistantId = `${Date.now()}-assistant`
     const assistantPlaceholder: Message = {
       id: assistantId,
@@ -82,7 +128,6 @@ export function ChatInterface() {
     setMessages(prev => [...prev, userMsg, assistantPlaceholder])
     setIsStreaming(true)
 
-    // Construir historial (excluir mensaje de bienvenida y el placeholder actual)
     const history = messages
       .filter(m => m.id !== 'welcome' && !m.isStreaming)
       .map(m => ({ role: m.role, content: m.content }))
@@ -93,7 +138,7 @@ export function ChatInterface() {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage, history }),
+        body: JSON.stringify({ message: userMessage, history, voiceMode: isVoice }),
         signal: abortRef.current.signal,
       })
 
@@ -115,17 +160,12 @@ export function ChatInterface() {
           if (!line.startsWith('data: ')) continue
           try {
             const data = JSON.parse(line.slice(6))
-
             if (data.type === 'token') {
               accumulated += data.content
-              // startTransition marks token renders as non-urgent so user
-              // input (typing, clicking) is never blocked by streaming updates.
               startTransition(() => {
                 setMessages(prev =>
                   prev.map(m =>
-                    m.id === assistantId
-                      ? { ...m, content: accumulated }
-                      : m
+                    m.id === assistantId ? { ...m, content: accumulated } : m
                   )
                 )
               })
@@ -136,12 +176,9 @@ export function ChatInterface() {
         }
       }
 
-      // Finalizar: quitar isStreaming, añadir fuentes
       setMessages(prev =>
         prev.map(m =>
-          m.id === assistantId
-            ? { ...m, isStreaming: false, sources }
-            : m
+          m.id === assistantId ? { ...m, isStreaming: false, sources } : m
         )
       )
     } catch (error: unknown) {
@@ -155,7 +192,13 @@ export function ChatInterface() {
       )
     } finally {
       setIsStreaming(false)
+      setVoiceMode(false)
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    await sendMessage(input, voiceMode)
   }
 
   return (
@@ -169,28 +212,16 @@ export function ChatInterface() {
         {messages.map(message => (
           <div
             key={message.id}
-            className={cn(
-              'flex gap-3',
-              message.role === 'user' && 'flex-row-reverse'
-            )}
+            className={cn('flex gap-3', message.role === 'user' && 'flex-row-reverse')}
           >
-            {/* Avatar */}
             <div className={cn(
               'shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
-              message.role === 'assistant'
-                ? 'bg-primary/10 text-primary'
-                : 'bg-muted text-muted-foreground'
+              message.role === 'assistant' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
             )}>
-              {message.role === 'assistant'
-                ? <Bot size={16} />
-                : <User size={16} />}
+              {message.role === 'assistant' ? <Bot size={16} /> : <User size={16} />}
             </div>
 
-            <div className={cn(
-              'flex flex-col gap-2 max-w-[80%]',
-              message.role === 'user' && 'items-end'
-            )}>
-              {/* Burbuja */}
+            <div className={cn('flex flex-col gap-2 max-w-[80%]', message.role === 'user' && 'items-end')}>
               <div className={cn(
                 'rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
                 message.role === 'assistant'
@@ -208,7 +239,6 @@ export function ChatInterface() {
                 )}
               </div>
 
-              {/* Fuentes */}
               {message.sources && message.sources.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {message.sources.map(source => (
@@ -234,6 +264,14 @@ export function ChatInterface() {
         <div ref={bottomRef} />
       </div>
 
+      {/* Indicador de escucha activa */}
+      {isListening && (
+        <div className="px-4 pb-1 flex items-center gap-2 text-xs text-red-500 animate-pulse">
+          <span className="w-2 h-2 rounded-full bg-red-500 inline-block"/>
+          Escuchando... habla ahora
+        </div>
+      )}
+
       {/* Input */}
       <form
         onSubmit={handleSubmit}
@@ -241,12 +279,23 @@ export function ChatInterface() {
       >
         <Input
           value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="Pregunta sobre tus tareas..."
-          disabled={isStreaming}
+          onChange={e => { setInput(e.target.value); setVoiceMode(false) }}
+          placeholder={isListening ? 'Escuchando...' : 'Pregunta sobre tus tareas...'}
+          disabled={isStreaming || isListening}
           className="flex-1"
           autoFocus
         />
+        <Button
+          type="button"
+          size="icon"
+          variant={isListening ? 'destructive' : 'outline'}
+          onClick={startVoiceInput}
+          disabled={isStreaming}
+          title={isListening ? 'Detener grabación' : 'Dictar por voz'}
+          className={isListening ? 'animate-pulse' : ''}
+        >
+          {isListening ? <MicOff size={16} /> : <Mic size={16} />}
+        </Button>
         <Button
           type="submit"
           size="icon"

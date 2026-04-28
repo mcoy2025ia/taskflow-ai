@@ -15,9 +15,10 @@ export async function POST(request: NextRequest) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
   }
 
-  const { message, history = [] }: {
+  const { message, history = [], voiceMode = false }: {
     message: string
     history: Array<{ role: 'user' | 'assistant'; content: string }>
+    voiceMode?: boolean
   } = await request.json()
 
   if (!message?.trim()) {
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
   })
 
   const contextBlock = buildContextBlock(relevantTasks)
-  const systemPrompt = buildSystemPrompt(contextBlock)
+  const systemPrompt = buildSystemPrompt(contextBlock, voiceMode)
 
   // 2. Construir historial de mensajes para el LLM
   const messages: ChatMessage[] = [

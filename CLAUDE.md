@@ -19,6 +19,7 @@ npm run dev           # dev server
 npm run build         # build de producción
 npm run lint          # ESLint
 npm run start         # servidor de producción (requiere build previo)
+npx tsc --noEmit      # type-check sin compilar
 
 npm test              # Vitest (una sola pasada)
 npm run test:watch    # Vitest en modo watch
@@ -33,6 +34,8 @@ npx supabase gen types typescript --local > src/types/database.types.ts
 ### Tests unitarios (Vitest)
 Los tests viven en `src/actions/__tests__/tasks.test.ts`. Usan mocks de Supabase vía `makeChain()` — un builder que crea cadenas de query fluentes y awaitable. Para agregar tests de nuevas Server Actions, replicar ese patrón.
 
+Para correr un solo archivo: `npx vitest run src/actions/__tests__/tasks.test.ts`
+
 ### Tests E2E (Playwright)
 Requieren `.env.local` con credenciales reales. El proyecto `setup` ejecuta `e2e/auth.setup.ts` primero, guarda el estado de auth en `e2e/.auth/user.json`, y los tests de Chromium lo reutilizan. Para correr un solo test: `npx playwright test e2e/login.spec.ts`.
 
@@ -44,17 +47,22 @@ src/
     (auth)/             ← login, register — sin sidebar
     (dashboard)/        ← board, chat — con sidebar + topbar
     api/
-      chat/             ← streaming SSE, runtime: nodejs
+      chat/             ← streaming SSE, runtime: nodejs (no edge)
       embed/            ← requiere HMAC, usa service_role; excluida de middleware auth (junto con api/backfill)
   actions/              ← "use server", siempre validar con Zod antes de tocar Supabase
+  components/
+    kanban/
+      board-dynamic.tsx ← dynamic(() => import('./board'), { ssr: false }) — evita errores de hidratación con @dnd-kit
+      board.tsx         ← KanbanBoard con DnDContext, useOptimistic, useTransition
   lib/
     supabase/
       client.ts         ← createBrowserClient (solo en 'use client')
       server.ts         ← createServerClient con cookies() — nuevo en cada request
+      get-user.ts       ← helper usado en page-level para obtener el usuario autenticado
     ai/
       voyage.ts         ← generateEmbedding / generateQueryEmbedding — usa Voyage AI voyage-3-lite (512 dims)
-      chat.ts           ← getChatProvider() → GroqProvider | OllamaProvider
-      rag.ts            ← searchTasksByQuery → buildContextBlock → buildSystemPrompt
+      chat.ts           ← getChatProvider() → GroqProvider | OllamaProvider (seleccionado por CHAT_PROVIDER)
+      rag.ts            ← searchTasksByQuery (threshold 0.65, limit 5) → buildContextBlock → buildSystemPrompt
     hmac.ts             ← verifyHmacRequest / signRequest (protege api/embed)
   types/app.types.ts    ← Task, KanbanColumn, ChatMessage (tipos de dominio, no de DB)
 ```
@@ -104,6 +112,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ## Advertencia: mismatch de dimensiones
 Las migraciones SQL (`003_embeddings.sql` y `004_rls_policies.sql`) declaran `halfvec(1024)` (diseñadas para `voyage-3.5`), pero `voyage.ts` usa `voyage-3-lite` que genera vectores de **512 dimensiones**. Antes de ejecutar `supabase db push` en un entorno nuevo, cambiar `halfvec(1024)` → `halfvec(512)` en ambos archivos de migración y en las firmas de las funciones SQL.
+
+> Nota: el `README.md` menciona `nomic-embed-text` (768 dims) — esa información está desactualizada. El código real usa Voyage AI voyage-3-lite (512 dims).
 
 ## Errores comunes y solución
 - **`cookies() should be awaited`**: en Next.js 15, `cookies()` es async. Usar `await cookies()`.
