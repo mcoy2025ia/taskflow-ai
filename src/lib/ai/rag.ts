@@ -26,8 +26,8 @@ export async function searchTasksByQuery(
   // 2. Llamar a la función SQL RLS-safe definida en Fase 2
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('search_tasks_by_embedding', {
-    query_embedding: `[${queryEmbedding.join(',')}]`,
-    match_threshold: threshold,
+    query_embedding: queryEmbedding as unknown as string,
+    similarity_threshold: threshold,
     match_count: limit,
   })
 
