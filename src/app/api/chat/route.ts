@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
   // 1. Búsqueda RAG: obtener tareas relevantes
   const relevantTasks = await searchTasksByQuery(message, {
-    threshold: 0.65,
+    threshold: 0.3,
     limit: 5,
     userId: user.id,
   })
