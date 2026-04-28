@@ -101,35 +101,14 @@ export default function AnalyticsPage() {
       })
       const { narrative } = await res.json()
 
-      // 2. Captura visual del tablero
-      const { default: html2canvas } = await import('html2canvas')
+      // 2. Construir PDF completamente en jsPDF (sin html2canvas — incompatible con oklch de Tailwind v4)
       const { default: jsPDF } = await import('jspdf')
-
-      const canvas = await html2canvas(dashboardRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        onclone: (clonedDoc) => {
-          // html2canvas no soporta oklch() ni lab() — Tailwind v4 los usa en los <style> tags.
-          // Reemplazamos con hex neutro para evitar el crash en el parser de colores.
-          clonedDoc.querySelectorAll('style').forEach(el => {
-            if (el.textContent) {
-              el.textContent = el.textContent
-                .replace(/oklch\([^)]+\)/g, '#888888')
-                .replace(/lab\([^)]+\)/g, '#888888')
-            }
-          })
-        },
-      })
-      const imgData = canvas.toDataURL('image/png')
-
-      // 3. Ensamblar PDF
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
       const pageW = doc.internal.pageSize.getWidth()
-      const pageH = doc.internal.pageSize.getHeight()
       const margin = 20
+      const contentW = pageW - margin * 2
 
-      // Portada
+      // ── Portada ──────────────────────────────────────────────────────────────
       doc.setFillColor(79, 70, 229)
       doc.rect(0, 0, pageW, 55, 'F')
       doc.setTextColor(255, 255, 255)
@@ -145,38 +124,133 @@ export default function AnalyticsPage() {
         margin, 50
       )
 
-      // KPIs en texto
+      // ── KPIs ─────────────────────────────────────────────────────────────────
       doc.setTextColor(30, 30, 30)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(11)
       doc.text('Métricas clave', margin, 70)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
-      const kpiLines = [
-        `Completadas: ${done}/${total} (${pct}%)   ·   En progreso: ${inProgress}   ·   Por hacer: ${todo}`,
-        `Días restantes: ${daysLeft}   ·   Velocidad requerida: ${velocityRequired} tareas/día   ·   Riesgo: ${atRisk ? 'SÍ' : 'NO'}`,
+
+      const kpiData = [
+        { label: 'Completadas', value: `${done}/${total}`, sub: `${pct}%`, color: [16, 185, 129] as [number,number,number] },
+        { label: 'En progreso', value: String(inProgress), sub: 'activas', color: [245, 158, 11] as [number,number,number] },
+        { label: 'Por hacer',   value: String(todo),       sub: 'backlog', color: [100, 116, 139] as [number,number,number] },
+        { label: 'Días restantes', value: String(daysLeft), sub: atRisk ? '⚠ Riesgo' : '✓ En tiempo', color: atRisk ? [239,68,68] as [number,number,number] : [16,185,129] as [number,number,number] },
       ]
-      doc.text(kpiLines, margin, 78)
+      const kpiW = contentW / 4
+      kpiData.forEach((k, i) => {
+        const x = margin + i * kpiW
+        doc.setFillColor(248, 250, 252)
+        doc.roundedRect(x, 76, kpiW - 3, 22, 2, 2, 'F')
+        doc.setFontSize(7)
+        doc.setTextColor(100, 116, 139)
+        doc.text(k.label.toUpperCase(), x + 3, 81)
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(14)
+        doc.setTextColor(...k.color)
+        doc.text(k.value, x + 3, 90)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(7)
+        doc.setTextColor(100, 116, 139)
+        doc.text(k.sub, x + 3, 95)
+      })
 
-      // Narrativa
+      // ── Velocidad ────────────────────────────────────────────────────────────
+      doc.setTextColor(30, 30, 30)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(11)
-      doc.text('Análisis ejecutivo', margin, 96)
+      doc.text('Velocidad de ejecución', margin, 110)
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(9)
-      const narrativeLines = doc.splitTextToSize(narrative, pageW - margin * 2)
-      doc.text(narrativeLines, margin, 104)
+      doc.setTextColor(100, 116, 139)
+      doc.text(
+        `Actual: ${velocityActual} tareas/día   ·   Requerida: ${velocityRequired} tareas/día   ·   Pendientes: ${pending}   ·   Riesgo: ${atRisk ? 'SÍ' : 'NO'}`,
+        margin, 117
+      )
 
-      // Segunda página: tablero visual
-      doc.addPage()
+      // ── Narrativa ────────────────────────────────────────────────────────────
+      doc.setTextColor(30, 30, 30)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(11)
-      doc.setTextColor(30, 30, 30)
-      doc.text('Tablero de Analítica', margin, 18)
+      doc.text('Análisis ejecutivo', margin, 130)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(50, 50, 50)
+      const narrativeLines = doc.splitTextToSize(narrative, contentW)
+      doc.text(narrativeLines, margin, 138)
 
-      const imgW = pageW - margin * 2
-      const imgH = (canvas.height / canvas.width) * imgW
-      doc.addImage(imgData, 'PNG', margin, 26, imgW, Math.min(imgH, pageH - 36))
+      // ── Página 2: Progreso por fase ──────────────────────────────────────────
+      doc.addPage()
+      doc.setFillColor(79, 70, 229)
+      doc.rect(0, 0, pageW, 18, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.text('Progreso por Fase del Pipeline', margin, 12)
+
+      doc.setTextColor(30, 30, 30)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.text('Fases', margin, 30)
+
+      const phaseColors: Record<string, [number,number,number]> = {
+        'Bronze (6)':       [205, 127, 50],
+        'Silver (6)':       [148, 163, 184],
+        'Gold (3)':         [245, 158, 11],
+        'Feature Eng. (4)': [139, 92, 246],
+        'ML (2+3)':         [59, 130, 246],
+        'Dashboard (3)':    [16, 185, 129],
+        'Informe (2)':      [239, 68, 68],
+      }
+
+      phaseReal.forEach((phase, i) => {
+        const y = 36 + i * 14
+        const barW = contentW - 40
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8)
+        doc.setTextColor(50, 50, 50)
+        doc.text(phase.name, margin, y + 4)
+        doc.setFillColor(241, 245, 249)
+        doc.roundedRect(margin + 40, y, barW, 5, 1, 1, 'F')
+        const fill = (phase.pct / 100) * barW
+        if (fill > 0) {
+          const c = phaseColors[phase.name] ?? [99, 102, 241]
+          doc.setFillColor(...c)
+          doc.roundedRect(margin + 40, y, fill, 5, 1, 1, 'F')
+        }
+        doc.setFontSize(7)
+        doc.setTextColor(100, 116, 139)
+        doc.text(`${phase.done}/${phase.total} · ${phase.pct}%`, margin + 40 + barW + 2, y + 4)
+      })
+
+      // ── Prioridad ────────────────────────────────────────────────────────────
+      let py = 36 + phaseReal.length * 14 + 12
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10)
+      doc.setTextColor(30, 30, 30)
+      doc.text('Tareas Pendientes por Prioridad', margin, py)
+      py += 8
+
+      const priData = [
+        { label: 'Alta',  count: tasks.filter(t => t.priority === 'high'   && t.status !== 'done').length, color: [239,68,68]   as [number,number,number] },
+        { label: 'Media', count: tasks.filter(t => t.priority === 'medium' && t.status !== 'done').length, color: [245,158,11]  as [number,number,number] },
+        { label: 'Baja',  count: tasks.filter(t => t.priority === 'low'    && t.status !== 'done').length, color: [100,116,139] as [number,number,number] },
+      ]
+      const boxW = contentW / 3
+      priData.forEach((p, i) => {
+        const x = margin + i * boxW
+        doc.setFillColor(248, 250, 252)
+        doc.roundedRect(x, py, boxW - 4, 20, 2, 2, 'F')
+        doc.setFillColor(...p.color)
+        doc.circle(x + 5, py + 5, 2, 'F')
+        doc.setFont('helvetica', 'bold')
+        doc.setFontSize(16)
+        doc.setTextColor(...p.color)
+        doc.text(String(p.count), x + 5, py + 15)
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(8)
+        doc.setTextColor(100, 116, 139)
+        doc.text(p.label, x + 14, py + 15)
+      })
 
       doc.save(`taskflow-informe-${new Date().toISOString().slice(0, 10)}.pdf`)
     } catch (err) {
