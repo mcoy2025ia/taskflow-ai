@@ -54,17 +54,23 @@ export default function AnalyticsPage() {
   const pct = Math.round(done / total * 100)
 
   const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const delivery = new Date('2025-05-12')
-  delivery.setHours(0, 0, 0, 0)
-  const daysLeft = Math.max(0, Math.ceil((delivery.getTime() - today.getTime()) / 86400000))
+  const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()))
+  const startUTC = new Date(Date.UTC(2025, 1, 27))   // Feb 27
+  const endUTC = new Date(Date.UTC(2025, 4, 12))      // May 12
+
+  const daysElapsed = Math.max(1, Math.floor((todayUTC.getTime() - startUTC.getTime()) / 86400000))
+  const daysLeft = Math.max(0, Math.floor((endUTC.getTime() - todayUTC.getTime()) / 86400000))
+  const totalDays = Math.floor((endUTC.getTime() - startUTC.getTime()) / 86400000)
+  const projectPct = Math.round((daysElapsed / totalDays) * 100)
+
   const pending = inProgress + todo
-  const velocityRequired = daysLeft > 0 ? (pending / daysLeft).toFixed(1) : 'N/A'
-  const projectStartDate = new Date('2025-02-27')
-  projectStartDate.setHours(0, 0, 0, 0)
-  const daysElapsed = Math.ceil((today.getTime() - projectStartDate.getTime()) / 86400000)
-  const velocityActual = daysElapsed > 0 ? (done / daysElapsed).toFixed(1) : '0'
+  const velocityActual = (done / daysElapsed).toFixed(2)
+  const velocityRequired = daysLeft > 0 ? (pending / daysLeft).toFixed(2) : 'N/A'
   const atRisk = daysLeft > 0 && parseFloat(velocityRequired) > parseFloat(velocityActual)
+
+  // Semanas transcurridas
+  const weeksElapsed = Math.floor(daysElapsed / 7)
+  const velocityWeekly = weeksElapsed > 0 ? (done / weeksElapsed).toFixed(1) : '0'
 
   // Burndown
   const burndown = WEEKS.map(w => {
