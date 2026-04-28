@@ -19,36 +19,71 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { summary }: { summary: ReportSummary } = await request.json()
+
   const pct = Math.round(summary.done / summary.total * 100)
   const pending = summary.in_progress + summary.todo
-  const velocityRequired = summary.daysLeft > 0 ? (pending / summary.daysLeft).toFixed(1) : 'N/A'
-
+  const totalDays = 75
+  const daysElapsed = totalDays - summary.daysLeft
+  const timePct = Math.round((daysElapsed / totalDays) * 100)
+  const weeksElapsed = Math.max(1, Math.floor(daysElapsed / 7))
+  const velocityActual = (summary.done / Math.max(1, daysElapsed)).toFixed(2)
+  const velocityWeekly = (summary.done / weeksElapsed).toFixed(1)
+  const velocityRequired = summary.daysLeft > 0 ? (pending / summary.daysLeft).toFixed(2) : 'N/A'
   const velocityGap = summary.daysLeft > 0
-    ? (parseFloat(velocityRequired) - (summary.done / 60)).toFixed(2)
-    : '0'
+    ? (parseFloat(velocityRequired) - parseFloat(velocityActual)).toFixed(2)
+    : 'N/A'
+  const deficit = velocityGap !== 'N/A' && parseFloat(velocityGap) > 0
 
-  const prompt = `Eres el líder de datos de un proyecto de ingeniería de datos y machine learning sobre el dataset público de Olist (e-commerce brasileño). El proyecto tiene 7 fases: Bronze (ingesta y calidad de datos crudos), Silver (transformaciones y joins maestros), Gold (agregaciones de negocio: revenue, CLV, seller performance), Feature Engineering (variables para ML: recencia, reviews, cancelaciones, estacionalidad), Selección de Modelos ML (churn y predicción de retrasos con XGBoost/LightGBM), Dashboards ejecutivos y operacionales, e Informe final con despliegue del modelo.
+  const today = new Date().toLocaleDateString('es-CO', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  })
 
-Estado actual del proyecto al ${new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}:
-- Avance global: ${summary.done}/${summary.total} tareas completadas (${pct}%)
-- Fases 100% completas: Bronze y Silver
-- Fases en ejecución: Gold (0/3), Feature Engineering (0/4), ML baseline (2/5 iniciados)
-- Fases sin iniciar: Dashboards (0/3), Informe ejecutivo y despliegue (0/2)
-- Tareas en progreso activo: ${summary.in_progress}
-- Tareas en backlog: ${summary.todo}
-- Tareas vencidas sin completar: ${summary.overdue}
-- Días restantes hasta entrega: ${summary.daysLeft} (fecha límite: ${summary.deliveryDate})
-- Velocidad actual: ${(summary.done / 60).toFixed(1)} tareas/día (basado en 60 días transcurridos)
-- Velocidad requerida para entregar a tiempo: ${velocityRequired} tareas/día
-- Brecha de velocidad: ${velocityGap} tareas/día ${parseFloat(velocityGap) > 0 ? '(déficit crítico)' : '(margen positivo)'}
+  const prompt = `Eres el líder de datos de un proyecto de ingeniería de datos y machine learning sobre el dataset público de Olist (e-commerce brasileño). Redacta un informe ejecutivo formal dirigido al patrocinador del proyecto.
 
-Genera un informe ejecutivo en español de exactamente 3 párrafos densos y específicos, dirigido al patrocinador del proyecto. Usa datos concretos, nombra las fases por su nombre técnico, identifica riesgos reales basados en los números, y propón acciones específicas y accionables (no genéricas). El tono debe ser directo, profesional y sin eufemismos — si hay riesgo de no entregar, dilo claramente.
+DATOS DEL PROYECTO:
+- Fecha de corte del informe: ${today}
+- Inicio: 27 de febrero de 2025
+- Fin planificado: 12 de mayo de 2025
+- Duración total: ${totalDays} días
+- Días transcurridos: ${daysElapsed} de ${totalDays} (${timePct}% del tiempo consumido)
+- Días restantes: ${summary.daysLeft}
 
-Párrafo 1: Estado de avance con métricas y qué fases están en riesgo.
-Párrafo 2: Análisis de riesgo cuantificado — brecha de velocidad, fases críticas, dependencias bloqueantes entre fases.
-Párrafo 3: Plan de acción para los ${summary.daysLeft} días restantes — qué paralizar, qué acelerar, qué negociar con el patrocinador.
+ESTADO DE TAREAS:
+- Total: ${summary.total} tareas
+- Completadas: ${summary.done} (${pct}% del total)
+- En progreso: ${summary.in_progress}
+- Por hacer: ${summary.todo}
+- Vencidas sin completar: ${summary.overdue}
+- Brecha avance vs tiempo: tareas ${pct}% completadas con ${timePct}% del tiempo consumido
 
-Responde SOLO con los 3 párrafos separados por salto de línea doble. Sin títulos, sin markdown, sin bullets. Mínimo 120 palabras por párrafo.`
+FASES DEL PIPELINE:
+- Bronze: 6/6 COMPLETA
+- Silver: 6/6 COMPLETA
+- Gold: 0/3 en ejecución — bloqueante para ML y Dashboards
+- Feature Engineering: 0/4 en ejecución — bloqueante para ML
+- Selección de Modelos ML: 2/5 iniciados — depende de Gold y Feature Eng.
+- Dashboards: 0/3 sin iniciar — depende de Gold
+- Informe y Despliegue: 0/2 sin iniciar — depende de todo lo anterior
+
+VELOCIDAD:
+- Actual: ${velocityActual} tareas/día | ${velocityWeekly} tareas/semana
+- Requerida para entregar a tiempo: ${velocityRequired} tareas/día
+- Brecha: ${velocityGap} tareas/día — ${deficit ? 'DÉFICIT CRÍTICO' : 'margen positivo'}
+- Semana actual del proyecto: semana ${weeksElapsed + 1} de ${Math.ceil(totalDays / 7)}
+
+Estructura el informe con estos títulos exactos seguidos de dos puntos y el texto en el mismo párrafo:
+
+RESUMEN EJECUTIVO: Fecha de inicio, fecha de entrega, días restantes, porcentaje de avance en tareas vs porcentaje de tiempo consumido. Si hay brecha entre ambos, cuantifícala como señal de alerta.
+
+ESTADO SEMANAL: En qué semana del proyecto estamos, velocidad semanal promedio real, cuántas tareas por semana se necesitan para cerrar a tiempo, y si esa velocidad es alcanzable.
+
+ESTADO POR FASE: Para cada fase activa o pendiente (Gold, Feature Eng., ML, Dashboards, Informe) describe en una oración: estado actual, si es bloqueante, y nivel de riesgo (ALTO/MEDIO/BAJO).
+
+RECOMENDACIONES: Tres recomendaciones numeradas, concretas, con nombre de fase o tarea específica. Sin generalidades.
+
+VISIÓN CRÍTICA: Sin eufemismos — ¿se cumplirá la entrega el 12 de mayo? Presenta los dos escenarios posibles con los números que los respaldan. Si la entrega no es viable, dilo directamente.
+
+Máximo 120 palabras por sección. Sin markdown, sin bullets, sin asteriscos. Solo texto plano con los títulos en mayúsculas seguidos de dos puntos.`
 
   const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
@@ -60,8 +95,8 @@ Responde SOLO con los 3 párrafos separados por salto de línea doble. Sin títu
       model: 'llama-3.3-70b-versatile',
       messages: [{ role: 'user', content: prompt }],
       stream: false,
-      temperature: 0.7,
-      max_tokens: 1000,
+      temperature: 0.75,
+      max_tokens: 1500,
     }),
   })
 
