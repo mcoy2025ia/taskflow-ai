@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
   const relevantTasks = await searchTasksByQuery(message, {
     threshold: 0.65,
     limit: 5,
+    userId: user.id,
   })
 
   const contextBlock = buildContextBlock(relevantTasks)

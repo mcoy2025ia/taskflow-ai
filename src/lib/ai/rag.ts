@@ -13,12 +13,9 @@ export interface TaskSearchResult {
 
 export async function searchTasksByQuery(
   query: string,
-  options: {
-    threshold?: number
-    limit?: number
-  } = {}
+  options: { threshold?: number; limit?: number; userId?: string } = {}
 ): Promise<TaskSearchResult[]> {
-  const { threshold = 0.65, limit = 5 } = options
+  const { threshold = 0.65, limit = 5, userId } = options
 
   // 1. Embeddear la query con input_type: 'query'
   const queryEmbedding = await generateQueryEmbedding(query)
@@ -29,6 +26,7 @@ export async function searchTasksByQuery(
     query_embedding: queryEmbedding as unknown as string,
     similarity_threshold: threshold,
     match_count: limit,
+    p_user_id: userId ?? null,
   })
 
   if (error) {
