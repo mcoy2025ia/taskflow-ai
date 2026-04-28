@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 interface TaskRow {
@@ -27,6 +27,8 @@ const WEEKS = [
 export default function AnalyticsPage() {
   const [tasks, setTasks] = useState<TaskRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [isExporting, setIsExporting] = useState(false)
+  const dashboardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -83,14 +85,115 @@ export default function AnalyticsPage() {
   ]
 
   const maxBurndown = total
+  const overdue = tasks.filter(t => t.due_date && new Date(t.due_date) < today && t.status !== 'done').length
+
+  async function handleExportPDF() {
+    if (!dashboardRef.current) return
+    setIsExporting(true)
+    try {
+      // 1. Narrativa ejecutiva via LLM
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          summary: { total, done, in_progress: inProgress, todo, overdue, daysLeft, deliveryDate: '12 de mayo de 2025' },
+        }),
+      })
+      const { narrative } = await res.json()
+
+      // 2. Captura visual del tablero
+      const { default: html2canvas } = await import('html2canvas')
+      const { default: jsPDF } = await import('jspdf')
+
+      const canvas = await html2canvas(dashboardRef.current, { scale: 2, useCORS: true })
+      const imgData = canvas.toDataURL('image/png')
+
+      // 3. Ensamblar PDF
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pageW = doc.internal.pageSize.getWidth()
+      const pageH = doc.internal.pageSize.getHeight()
+      const margin = 20
+
+      // Portada
+      doc.setFillColor(79, 70, 229)
+      doc.rect(0, 0, pageW, 55, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(22)
+      doc.text('TaskFlow AI', margin, 28)
+      doc.setFontSize(13)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Informe Ejecutivo del Proyecto', margin, 39)
+      doc.setFontSize(9)
+      doc.text(
+        new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }),
+        margin, 50
+      )
+
+      // KPIs en texto
+      doc.setTextColor(30, 30, 30)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.text('Métricas clave', margin, 70)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      const kpiLines = [
+        `Completadas: ${done}/${total} (${pct}%)   ·   En progreso: ${inProgress}   ·   Por hacer: ${todo}`,
+        `Días restantes: ${daysLeft}   ·   Velocidad requerida: ${velocityRequired} tareas/día   ·   Riesgo: ${atRisk ? 'SÍ' : 'NO'}`,
+      ]
+      doc.text(kpiLines, margin, 78)
+
+      // Narrativa
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.text('Análisis ejecutivo', margin, 96)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      const narrativeLines = doc.splitTextToSize(narrative, pageW - margin * 2)
+      doc.text(narrativeLines, margin, 104)
+
+      // Segunda página: tablero visual
+      doc.addPage()
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.setTextColor(30, 30, 30)
+      doc.text('Tablero de Analítica', margin, 18)
+
+      const imgW = pageW - margin * 2
+      const imgH = (canvas.height / canvas.width) * imgW
+      doc.addImage(imgData, 'PNG', margin, 26, imgW, Math.min(imgH, pageH - 36))
+
+      doc.save(`taskflow-informe-${new Date().toISOString().slice(0, 10)}.pdf`)
+    } catch (err) {
+      console.error('[export-pdf]', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   return (
-    <div className="p-6 space-y-8 max-w-5xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold">Analítica del Proyecto</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Pipeline Olist · Entrega: 12 de mayo de 2025 · {daysLeft} días restantes
-        </p>
+    <div ref={dashboardRef} className="p-6 space-y-8 max-w-5xl mx-auto">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Analítica del Proyecto</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            Pipeline Olist · Entrega: 12 de mayo de 2025 · {daysLeft} días restantes
+          </p>
+        </div>
+        <button
+          onClick={handleExportPDF}
+          disabled={isExporting}
+          className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors"
+        >
+          {isExporting ? (
+            <>
+              <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin inline-block" />
+              Generando…
+            </>
+          ) : (
+            'Exportar PDF'
+          )}
+        </button>
       </div>
 
       {/* KPIs */}
