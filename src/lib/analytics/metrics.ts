@@ -109,9 +109,13 @@ export function computeMetrics(
     t => t.due_date && new Date(t.due_date) < todayUTC && t.status !== 'done'
   ).length
 
-  const daysElapsed = Math.max(1, Math.floor((todayUTC.getTime() - startDate.getTime()) / 86400000))
+  const totalDays   = Math.floor((endDate.getTime() - startDate.getTime()) / 86400000)
+  // daysElapsed se capa a totalDays para evitar timePct > 100% cuando el proyecto está vencido
+  const daysElapsed = Math.min(
+    Math.max(totalDays, 1),
+    Math.max(1, Math.floor((todayUTC.getTime() - startDate.getTime()) / 86400000))
+  )
   const daysLeft = Math.max(0, Math.floor((endDate.getTime() - todayUTC.getTime()) / 86400000))
-  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / 86400000)
   const pending = inProgress + todo
 
   const velActual = calculateVelocity(done, daysElapsed)

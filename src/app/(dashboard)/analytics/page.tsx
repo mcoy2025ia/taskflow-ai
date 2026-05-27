@@ -285,7 +285,8 @@ export default function AnalyticsPage() {
     daysElapsed, totalDays,
   } = metrics
 
-  const timePct = totalDays > 0 ? Math.round((daysElapsed / totalDays) * 100) : 0
+  // Cap a 100% — daysElapsed puede superar totalDays si el proyecto está vencido
+  const timePct = totalDays > 0 ? Math.min(100, Math.round((daysElapsed / totalDays) * 100)) : 0
   const deficit = velocityRequired !== 'N/A'
     ? Math.max(0, parseFloat(velocityRequired) - parseFloat(velocityActual))
     : 0
