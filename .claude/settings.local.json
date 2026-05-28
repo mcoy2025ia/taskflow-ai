@@ -26,7 +26,32 @@
       "Bash(vercel pull *)",
       "Bash(npx vitest *)",
       "Bash(npx tsc *)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\" -Force | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"Directory\"}else{\"File\"}}} | Format-Table -AutoSize)",
+      "Bash(node -e \"const pkg = require\\('./package.json'\\); console.log\\(pkg.dependencies.next\\)\")",
+      "Bash(npx eslint *)",
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\\\\src\\\\components\\\\chat\\\\chat-interface.tsx\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(cd \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\"; \\(Get-Content \"src/app/\\(dashboard\\)/analytics/page.tsx\"\\).Count)",
+      "Bash(node -e \"const p = require\\('./node_modules/@sentry/nextjs/package.json'\\); console.log\\(p.version\\)\")",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(JSON.stringify\\({deps: Object.keys\\(p.dependencies\\), dev: Object.keys\\(p.devDependencies\\)}, null, 2\\)\\)\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(p.engines\\)\")",
+      "Bash(npx supabase *)",
+      "Bash(git *)",
+      "Bash(node -e \"const t = require\\('@supabase/supabase-js'\\); console.log\\(Object.keys\\(t\\)\\)\")",
+      "Bash(Get-ChildItem \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\\\\node_modules\\\\@supabase\\\\postgrest-js\\\\dist\" -Recurse -Filter \"*.d.ts\")",
+      "Bash(Select-Object -First 5 -ExpandProperty FullName)",
+      "PowerShell(\\(Get-Content \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\\\\CLAUDE_GUIA.md\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(cd \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\"; $env:PYTHONIOENCODING=\"utf-8\"; python scripts/seed_olist_93.py)",
+      "PowerShell(cd \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\"; $env:PYTHONIOENCODING=\"utf-8\"; python scripts/patch_93_coherence.py)",
+      "PowerShell(cd \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\"; $env:PYTHONIOENCODING=\"utf-8\"; python scripts/check_board_state.py)",
+      "PowerShell(cd \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\"; $env:PYTHONIOENCODING=\"utf-8\"; python scripts/fix_streamlit_desc.py)",
+      "PowerShell(cd \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\"; $env:PYTHONIOENCODING=\"utf-8\"; python scripts/fix_project_dates.py)",
+      "PowerShell(cd \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\"; git ls-files --others --exclude-standard | Where-Object { $_ -notmatch '\\\\.backup$|supabase/\\\\.temp' } | Sort-Object)"
     ]
   }
 }

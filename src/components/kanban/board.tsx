@@ -1,6 +1,6 @@
 'use client'
 
-import { useOptimistic, useTransition, useMemo, useCallback } from 'react'
+import { useOptimistic, useTransition, useMemo, useCallback, useState, createContext, useContext } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -13,12 +13,19 @@ import {
   closestCorners,
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { useState } from 'react'
 import { toast } from 'sonner'
 import { KanbanColumn } from './column'
 import { TaskCard } from './task-card'
+import { TaskDrawer } from './task-drawer'
 import { moveTask } from '@/actions/task.actions'
-import type { Task, TaskStatus, KanbanColumn as KanbanColumnType } from '@/types/app.types'
+import { MemberFilterBar } from './member-filter-bar'
+import { useRealtimeTasks } from '@/hooks/use-realtime-tasks'
+import { CsvImport } from '@/components/analytics/csv-import'
+import type { TaskWithAssignees, TaskStatus, KanbanColumn as KanbanColumnType, ProjectMember } from '@/types/app.types'
+
+// Context so TaskCard can open the drawer without prop-drilling 3 levels
+export const TaskDrawerContext = createContext<(task: TaskWithAssignees) => void>(() => {})
+export function useTaskDrawer() { return useContext(TaskDrawerContext) }
 
 const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
   { id: 'todo',        label: 'Por hacer',   color: 'bg-slate-100 dark:bg-slate-800' },
@@ -27,10 +34,12 @@ const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
 ]
 
 interface BoardProps {
-  initialTasks: Task[]
+  initialTasks: TaskWithAssignees[]
+  members: ProjectMember[]
+  projectId: string | null
+  currentUserId: string
 }
 
-// Reducer para el estado optimista del tablero
 type OptimisticAction = {
   type: 'MOVE_TASK'
   taskId: string
@@ -38,7 +47,7 @@ type OptimisticAction = {
   newPosition: number
 }
 
-function boardReducer(tasks: Task[], action: OptimisticAction): Task[] {
+function boardReducer(tasks: TaskWithAssignees[], action: OptimisticAction): TaskWithAssignees[] {
   if (action.type === 'MOVE_TASK') {
     return tasks.map(task =>
       task.id === action.taskId
@@ -49,9 +58,13 @@ function boardReducer(tasks: Task[], action: OptimisticAction): Task[] {
   return tasks
 }
 
-export function KanbanBoard({ initialTasks }: BoardProps) {
-  const [activeTask, setActiveTask] = useState<Task | null>(null)
+export function KanbanBoard({ initialTasks, members, projectId, currentUserId }: BoardProps) {
+  const [activeTask, setActiveTask] = useState<TaskWithAssignees | null>(null)
+  const [drawerTask, setDrawerTask] = useState<TaskWithAssignees | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [filteredMemberId, setFilteredMemberId] = useState<string | null>(null)
+
+  useRealtimeTasks({ projectId, currentUserId })
 
   const [optimisticTasks, applyOptimisticMove] = useOptimistic(
     initialTasks,
@@ -60,22 +73,29 @@ export function KanbanBoard({ initialTasks }: BoardProps) {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 }, // Evitar drag accidental
+      activationConstraint: { distance: 8 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
 
+  const visibleTasks = useMemo(() =>
+    filteredMemberId
+      ? optimisticTasks.filter(t => t.assignees.includes(filteredMemberId))
+      : optimisticTasks,
+    [optimisticTasks, filteredMemberId]
+  )
+
   const columns = useMemo<KanbanColumnType[]>(() =>
     COLUMNS.map(col => ({
       id: col.id,
       title: col.label,
-      tasks: optimisticTasks
+      tasks: visibleTasks
         .filter(t => t.status === col.id)
         .sort((a, b) => a.position - b.position),
     })),
-    [optimisticTasks]
+    [visibleTasks]
   )
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -100,7 +120,6 @@ export function KanbanBoard({ initialTasks }: BoardProps) {
     const movedTask = optimisticTasks.find(t => t.id === active.id)
     if (!movedTask) return
 
-    // Position calculation runs synchronously — O(n) on ~20 tasks, negligible.
     const targetTasks = optimisticTasks
       .filter(t => t.status === targetStatus && t.id !== movedTask.id)
       .sort((a, b) => a.position - b.position)
@@ -134,30 +153,57 @@ export function KanbanBoard({ initialTasks }: BoardProps) {
     })
   }, [optimisticTasks, startTransition, applyOptimisticMove])
 
+  const isBoardEmpty = optimisticTasks.length === 0
+
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
-        {columns.map((col, i) => (
-          <KanbanColumn
-            key={col.id}
-            column={col}
-            colorClass={COLUMNS[i].color}
-            isPending={isPending}
+    <TaskDrawerContext.Provider value={setDrawerTask}>
+      <div className="flex flex-col md:h-full gap-3">
+        {members.length > 1 && !isBoardEmpty && (
+          <MemberFilterBar
+            members={members}
+            filteredMemberId={filteredMemberId}
+            onChange={setFilteredMemberId}
           />
-        ))}
+        )}
+
+        {isBoardEmpty ? (
+          <div className="md:flex-1 md:min-h-0 md:overflow-y-auto">
+            <CsvImport projectId={projectId} />
+          </div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:flex-1 md:min-h-0 md:overflow-hidden">
+              {columns.map((col, i) => (
+                <KanbanColumn
+                  key={col.id}
+                  column={col}
+                  colorClass={COLUMNS[i].color}
+                  isPending={isPending}
+                  members={members}
+                />
+              ))}
+            </div>
+
+            <DragOverlay>
+              {activeTask ? (
+                <TaskCard task={activeTask} members={members} isOverlay />
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
       </div>
 
-      {/* Overlay: tarjeta flotante durante el drag */}
-      <DragOverlay>
-        {activeTask ? (
-          <TaskCard task={activeTask} isOverlay />
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+      <TaskDrawer
+        task={drawerTask}
+        members={members}
+        currentUserId={currentUserId}
+        onClose={() => setDrawerTask(null)}
+      />
+    </TaskDrawerContext.Provider>
   )
 }

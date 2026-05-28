@@ -1,6 +1,8 @@
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant'
+  role: 'system' | 'user' | 'assistant' | 'tool'
   content: string
+  tool_calls?: { id: string; type: string; function: { name: string; arguments: string } }[]
+  tool_call_id?: string
 }
 
 export interface ChatProvider {
@@ -16,7 +18,7 @@ class GroqProvider implements ChatProvider {
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY ?? ''}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

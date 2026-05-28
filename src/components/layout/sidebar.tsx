@@ -1,10 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image' // <--- ESTA ES LA LÍNEA QUE FALTA
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { useTransition, type ReactNode, type ElementType } from 'react'
-// ... resto de tus imports (lucide-react, cn, etc.)
+import { useState, useEffect, useTransition, type ReactNode, type ElementType } from 'react'
 import {
   LayoutDashboard,
   MessageSquareText,
@@ -13,16 +12,23 @@ import {
   Cpu,
   LogOut,
   Zap,
+  X,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/actions/auth.actions'
+import { getChatSessions, deleteChatSession, type ChatSessionSummary } from '@/actions/chat.actions'
 import { toast } from 'sonner'
+import { ProjectSwitcher } from './project-switcher'
 
 interface SidebarProps {
   userName: string
   userEmail: string
   userInitials: string
   avatarUrl: string | null
+  isOpen?: boolean
+  onClose?: () => void
 }
 
 const NAV_MAIN = [
@@ -61,7 +67,7 @@ const NAV_SETTINGS = [
   },
 ]
 
-export function Sidebar({ userName, userEmail, userInitials, avatarUrl }: SidebarProps) {
+export function Sidebar({ userName, userEmail, userInitials, avatarUrl, isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const [isPending, startTransition] = useTransition()
 
@@ -73,20 +79,26 @@ export function Sidebar({ userName, userEmail, userInitials, avatarUrl }: Sideba
   }
 
   return (
-    <aside className="w-[220px] flex-shrink-0 flex flex-col bg-background border-r border-border/50 h-full">
+    <aside className={cn(
+      'fixed inset-y-0 left-0 z-40 md:static',
+      'w-[220px] flex-shrink-0 flex flex-col apple-glass bg-background/60 border-r border-border/40 h-full',
+      'transition-transform duration-300 ease-in-out md:transition-none',
+      isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+    )}>
       {/* Brand */}
-      <div className="flex items-center gap-2.5 px-4 py-[18px] border-b border-border/50">
-        <div className="w-7 h-7 rounded-[7px] bg-gradient-to-br from-indigo-600 to-violet-500 flex items-center justify-center flex-shrink-0">
-          <Zap size={14} className="text-white" strokeWidth={2.5} />
+      <div className="flex items-center justify-between gap-2.5 px-4 py-[18px] border-b border-border/50">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-[7px] bg-gradient-to-br from-indigo-600 to-violet-500 flex items-center justify-center flex-shrink-0">
+            <Zap size={14} className="text-white" strokeWidth={2.5} />
+          </div>
+          <ProjectSwitcher />
         </div>
-        <div>
-          <p className="text-sm font-semibold tracking-tight leading-none">
-            TaskFlow AI
-          </p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            Workspace personal
-          </p>
-        </div>
+        <button
+          onClick={onClose}
+          className="md:hidden w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+        >
+          <X size={15} />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -96,9 +108,11 @@ export function Sidebar({ userName, userEmail, userInitials, avatarUrl }: Sideba
             <NavItem
               key={item.href}
               {...item}
-              isActive={pathname === item.href}
+              isActive={pathname === item.href || (item.href === '/chat' && pathname.startsWith('/chat'))}
+              onClick={onClose}
             />
           ))}
+          {pathname.startsWith('/chat') && <ChatSessions currentPath={pathname} />}
         </NavSection>
 
         <NavSection label="Configuración">
@@ -107,6 +121,7 @@ export function Sidebar({ userName, userEmail, userInitials, avatarUrl }: Sideba
               key={item.href}
               {...item}
               isActive={pathname.startsWith(item.href)}
+              onClick={onClose}
             />
           ))}
         </NavSection>
@@ -162,6 +177,79 @@ export function Sidebar({ userName, userEmail, userInitials, avatarUrl }: Sideba
   )
 }
 
+function ChatSessions({ currentPath }: { currentPath: string }) {
+  const [sessions, setSessions] = useState<ChatSessionSummary[]>([])
+  const [, startTransition] = useTransition()
+
+  function loadSessions() {
+    getChatSessions().then(setSessions)
+  }
+
+  useEffect(() => {
+    loadSessions()
+    window.addEventListener('taskflow:session_updated', loadSessions)
+    return () => window.removeEventListener('taskflow:session_updated', loadSessions)
+  }, [])
+
+  function handleDelete(e: React.MouseEvent, sessionId: string) {
+    e.preventDefault()
+    e.stopPropagation()
+    startTransition(async () => {
+      const result = await deleteChatSession(sessionId)
+      if (result.success) {
+        setSessions(prev => prev.filter(s => s.id !== sessionId))
+        // If deleting current session, go to fresh chat
+        if (currentPath.includes(sessionId)) {
+          window.location.href = '/chat'
+        }
+      } else {
+        toast.error('No se pudo eliminar la conversación')
+      }
+    })
+  }
+
+  if (!sessions.length) return null
+
+  return (
+    <div className="mt-1 ml-2 border-l border-border/40 pl-2 flex flex-col gap-0.5">
+      <Link
+        href="/chat"
+        className="flex items-center gap-1.5 px-2 py-1.5 rounded-[6px] text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors group"
+      >
+        <Plus size={11} />
+        <span>Nueva conversación</span>
+      </Link>
+      {sessions.slice(0, 6).map(s => {
+        const isActive = currentPath.includes(s.id)
+        return (
+          <div key={s.id} className={cn(
+            'flex items-center gap-1 px-2 py-1.5 rounded-[6px] group transition-colors',
+            isActive ? 'bg-indigo-50 dark:bg-indigo-950/40' : 'hover:bg-muted/50'
+          )}>
+            <Link
+              href={`/chat?session_id=${s.id}`}
+              className={cn(
+                'flex-1 truncate text-xs leading-none',
+                isActive ? 'text-indigo-700 dark:text-indigo-300 font-medium' : 'text-muted-foreground hover:text-foreground'
+              )}
+              title={s.title}
+            >
+              {s.title}
+            </Link>
+            <button
+              onClick={(e) => handleDelete(e, s.id)}
+              className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/60 hover:text-destructive"
+              title="Eliminar conversación"
+            >
+              <Trash2 size={11} />
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function NavSection({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="mb-2">
@@ -179,17 +267,20 @@ function NavItem({
   icon: Icon,
   isActive,
   testId,
+  onClick,
 }: {
   href: string
   label: string
   icon: ElementType
   isActive: boolean
   testId: string
+  onClick?: () => void
 }) {
   return (
     <Link
       href={href}
       data-testid={testId}
+      onClick={onClick}
       className={cn(
         'flex items-center gap-2.5 px-2.5 py-[7px] rounded-[7px]',
         'text-sm transition-all duration-150',

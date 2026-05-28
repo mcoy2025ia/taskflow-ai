@@ -6,22 +6,23 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { cn } from '@/lib/utils'
 import { SortableTaskCard } from './sortable-task-card'
 import { CreateTaskDialog } from './create-task-dialog'
-import type { KanbanColumn as KanbanColumnType } from '@/types/app.types'
+import type { KanbanColumn as KanbanColumnType, ProjectMember } from '@/types/app.types'
 
 interface ColumnProps {
   column: KanbanColumnType
   colorClass: string
   isPending: boolean
+  members: ProjectMember[]
 }
 
-export const KanbanColumn = memo(function KanbanColumn({ column, colorClass, isPending }: ColumnProps) {
+export const KanbanColumn = memo(function KanbanColumn({ column, colorClass, isPending, members }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        'flex flex-col rounded-xl border border-border/50 transition-colors duration-200',
+        'flex flex-col rounded-xl border border-border/50 transition-colors duration-200 md:min-h-0',
         colorClass,
         isOver && 'ring-2 ring-primary ring-offset-2'
       )}
@@ -40,7 +41,7 @@ export const KanbanColumn = memo(function KanbanColumn({ column, colorClass, isP
       {/* Lista de tareas */}
       <div
         className={cn(
-          'flex-1 p-3 flex flex-col gap-2 min-h-[200px] transition-opacity',
+          'flex-1 p-3 flex flex-col gap-2 min-h-[200px] md:overflow-y-auto transition-opacity',
           isPending && 'opacity-70'
         )}
       >
@@ -49,7 +50,7 @@ export const KanbanColumn = memo(function KanbanColumn({ column, colorClass, isP
           strategy={verticalListSortingStrategy}
         >
           {column.tasks.map(task => (
-            <SortableTaskCard key={task.id} task={task} />
+            <SortableTaskCard key={task.id} task={task} members={members} />
           ))}
         </SortableContext>
 

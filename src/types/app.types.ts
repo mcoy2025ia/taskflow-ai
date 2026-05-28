@@ -14,10 +14,22 @@ export interface Task {
   updated_at: string
 }
 
+export interface TaskWithAssignees extends Task {
+  assignees: string[] // user_ids
+}
+
 export interface KanbanColumn {
   id: TaskStatus
   title: string
-  tasks: Task[]
+  tasks: TaskWithAssignees[]
+}
+
+export interface ProjectMember {
+  userId: string
+  name: string
+  initials: string
+  avatarUrl: string | null
+  role: 'owner' | 'editor' | 'viewer'
 }
 
 export interface ChatMessage {

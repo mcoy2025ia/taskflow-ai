@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { ratelimit } from '@/lib/ratelimit'
+import { isBot, botBlockResponse } from '@/lib/bot-guard'
 
 export const runtime = 'nodejs'
 
@@ -11,45 +13,119 @@ interface ReportSummary {
   overdue: number
   daysLeft: number
   deliveryDate: string
+  projectId?: string
+}
+
+interface PhaseRow {
+  name: string
+  total: number
+  done: number
+  sort_order: number
+}
+
+function phaseStatus(done: number, total: number): string {
+  if (total === 0) return 'Sin tareas'
+  if (done === total) return 'COMPLETA'
+  if (done === 0) return 'Sin iniciar'
+  return 'En ejecución'
+}
+
+function buildPhasesBlock(phases: PhaseRow[]): string {
+  if (phases.length === 0) return 'No hay fases registradas para este proyecto.'
+  return phases
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map(ph => {
+      const pct = ph.total > 0 ? Math.round((ph.done / ph.total) * 100) : 0
+      return `- ${ph.name}: ${ph.done}/${ph.total} (${pct}%) — ${phaseStatus(ph.done, ph.total)}`
+    })
+    .join('\n')
 }
 
 export async function POST(request: NextRequest) {
+  if (isBot(request)) return botBlockResponse()
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { limited, headers: rlHeaders } = await ratelimit.report(user.id)
+  if (limited) {
+    return NextResponse.json(
+      { error: 'Demasiadas solicitudes. Espera un momento.' },
+      { status: 429, headers: rlHeaders }
+    )
+  }
+
   const { summary }: { summary: ReportSummary } = await request.json()
 
-  const pct = Math.round(summary.done / summary.total * 100)
+  const pct = summary.total > 0 ? Math.round(summary.done / summary.total * 100) : 0
   const pending = summary.in_progress + summary.todo
-  const startUTC = new Date(Date.UTC(2025, 1, 27))
-  const endUTC   = new Date(Date.UTC(2025, 4, 12))
-  const nowUTC   = new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()))
+
+  // Leer proyecto y fases reales desde la DB
+  let startUTC = new Date(Date.UTC(new Date().getFullYear(), 0, 1))
+  let endUTC   = new Date(Date.UTC(new Date().getFullYear(), 11, 31))
+  let projectName = 'Proyecto'
+  let phases: PhaseRow[] = []
+
+  if (summary.projectId) {
+    const [{ data: project }, { data: phaseData }] = await Promise.all([
+      supabase
+        .from('projects')
+        .select('name, start_date, delivery_date')
+        .eq('id', summary.projectId)
+        .eq('user_id', user.id)
+        .single(),
+      supabase
+        .from('project_phases')
+        .select('name, total, done, sort_order')
+        .eq('project_id', summary.projectId)
+        .order('sort_order'),
+    ])
+
+    if (project) {
+      const [sy, sm, sd] = project.start_date.split('-').map(Number)
+      const [ey, em, ed] = project.delivery_date.split('-').map(Number)
+      startUTC = new Date(Date.UTC(sy, sm - 1, sd))
+      endUTC   = new Date(Date.UTC(ey, em - 1, ed))
+      projectName = project.name
+    }
+
+    phases = (phaseData ?? []) as PhaseRow[]
+  }
+
+  const nowUTC      = new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()))
   const totalDays   = Math.floor((endUTC.getTime() - startUTC.getTime()) / 86400000)
-  const daysElapsed = Math.min(totalDays, Math.max(1, Math.floor((nowUTC.getTime() - startUTC.getTime()) / 86400000)))
-  const timePct = Math.round((daysElapsed / totalDays) * 100)
-  const weeksElapsed = Math.max(1, Math.floor(daysElapsed / 7))
-  const velocityActual = (summary.done / Math.max(1, daysElapsed)).toFixed(2)
-  const velocityWeekly = (summary.done / weeksElapsed).toFixed(1)
-  const velocityRequired = summary.daysLeft > 0 ? (pending / summary.daysLeft).toFixed(2) : 'N/A'
-  const velocityGap = summary.daysLeft > 0
+  const isOverdue   = nowUTC > endUTC
+  const daysOverdue = isOverdue ? Math.floor((nowUTC.getTime() - endUTC.getTime()) / 86400000) : 0
+  const effectiveNow  = isOverdue ? endUTC : nowUTC
+  const daysElapsed   = Math.max(1, Math.floor((effectiveNow.getTime() - startUTC.getTime()) / 86400000))
+  const timePct       = Math.round((daysElapsed / totalDays) * 100)
+  const weeksElapsed  = Math.max(1, Math.floor(daysElapsed / 7))
+  const velocityActual   = (summary.done / daysElapsed).toFixed(2)
+  const velocityWeekly   = (summary.done / weeksElapsed).toFixed(1)
+  const velocityRequired = !isOverdue && summary.daysLeft > 0
+    ? (pending / summary.daysLeft).toFixed(2)
+    : 'N/A'
+  const velocityGap = velocityRequired !== 'N/A'
     ? (parseFloat(velocityRequired) - parseFloat(velocityActual)).toFixed(2)
     : 'N/A'
   const deficit = velocityGap !== 'N/A' && parseFloat(velocityGap) > 0
 
-  const today = new Date().toLocaleDateString('es-CO', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-  })
+  const startLabel = startUTC.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
+  const endLabel   = endUTC.toLocaleDateString('es-CO',   { day: 'numeric', month: 'long', year: 'numeric' })
+  const today      = nowUTC.toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+  const phasesBlock = buildPhasesBlock(phases)
 
-  const prompt = `Eres el líder de datos de un proyecto de ingeniería de datos y machine learning sobre el dataset público de Olist (e-commerce brasileño). Redacta un informe ejecutivo formal dirigido al patrocinador del proyecto.
+  const prompt = `Eres el líder de datos del proyecto "${projectName}". Redacta un informe ejecutivo formal dirigido al patrocinador del proyecto.
 
 DATOS DEL PROYECTO:
 - Fecha de corte del informe: ${today}
-- Inicio: 27 de febrero de 2025
-- Fin planificado: 12 de mayo de 2025
+- Inicio: ${startLabel}
+- Fin planificado: ${endLabel}
 - Duración total: ${totalDays} días
 - Días transcurridos: ${daysElapsed} de ${totalDays} (${timePct}% del tiempo consumido)
 - Días restantes: ${summary.daysLeft}
+${isOverdue ? `- PROYECTO VENCIDO: han transcurrido ${daysOverdue} días desde la fecha de entrega` : ''}
 
 ESTADO DE TAREAS:
 - Total: ${summary.total} tareas
@@ -59,14 +135,8 @@ ESTADO DE TAREAS:
 - Vencidas sin completar: ${summary.overdue}
 - Brecha avance vs tiempo: tareas ${pct}% completadas con ${timePct}% del tiempo consumido
 
-FASES DEL PIPELINE:
-- Bronze: 6/6 COMPLETA
-- Silver: 6/6 COMPLETA
-- Gold: 0/3 en ejecución — bloqueante para ML y Dashboards
-- Feature Engineering: 0/4 en ejecución — bloqueante para ML
-- Selección de Modelos ML: 2/5 iniciados — depende de Gold y Feature Eng.
-- Dashboards: 0/3 sin iniciar — depende de Gold
-- Informe y Despliegue: 0/2 sin iniciar — depende de todo lo anterior
+FASES DEL PROYECTO:
+${phasesBlock}
 
 VELOCIDAD:
 - Actual: ${velocityActual} tareas/día | ${velocityWeekly} tareas/semana
@@ -80,11 +150,11 @@ RESUMEN EJECUTIVO: Fecha de inicio, fecha de entrega, días restantes, porcentaj
 
 ESTADO SEMANAL: En qué semana del proyecto estamos, velocidad semanal promedio real, cuántas tareas por semana se necesitan para cerrar a tiempo, y si esa velocidad es alcanzable.
 
-ESTADO POR FASE: Para cada fase activa o pendiente (Gold, Feature Eng., ML, Dashboards, Informe) describe en una oración: estado actual, si es bloqueante, y nivel de riesgo (ALTO/MEDIO/BAJO).
+ESTADO POR FASE: Para cada fase activa o pendiente describe en una oración: estado actual y nivel de riesgo (ALTO/MEDIO/BAJO). Basa tu análisis solo en los datos proporcionados.
 
-RECOMENDACIONES: Tres recomendaciones numeradas, concretas, con nombre de fase o tarea específica. Sin generalidades.
+RECOMENDACIONES: Tres recomendaciones numeradas, concretas, con nombre de fase o área específica. Sin generalidades.
 
-VISIÓN CRÍTICA: Sin eufemismos — ¿se cumplirá la entrega el 12 de mayo? Presenta los dos escenarios posibles con los números que los respaldan. Si la entrega no es viable, dilo directamente.
+VISIÓN CRÍTICA: Sin eufemismos — ¿se cumplirá la entrega el ${endLabel}? Presenta los dos escenarios posibles con los números que los respaldan. Si la entrega no es viable, dilo directamente.
 
 Máximo 120 palabras por sección. Sin markdown, sin bullets, sin asteriscos. Solo texto plano con los títulos en mayúsculas seguidos de dos puntos.`
 

@@ -5,9 +5,9 @@ create table if not exists public.task_embeddings (
   id           uuid primary key default uuid_generate_v4(),
   task_id      uuid not null references public.tasks(id) on delete cascade,
   user_id      uuid not null references auth.users(id) on delete cascade,
-  -- halfvec(1024): Voyage AI voyage-3.5 produce 1024 dimensiones
-  -- halfvec usa 16-bit floats → mitad de memoria que vector(1024)
-  embedding    halfvec(1024) not null,
+  -- halfvec(512): Voyage AI voyage-3-lite produce 512 dimensiones
+  -- halfvec usa 16-bit floats → mitad de memoria que vector(512)
+  embedding    halfvec(512) not null,
   -- Hash del contenido para detectar cambios y evitar re-embedding innecesario
   content_hash text not null,
   created_at   timestamptz not null default now(),

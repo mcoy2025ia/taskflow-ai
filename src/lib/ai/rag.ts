@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { generateQueryEmbedding } from './voyage'
+import { generateQueryEmbedding, rerank, buildTaskContent } from './voyage'
 import type { TaskStatus, TaskPriority } from '@/types/app.types'
 
 export interface TaskSearchResult {
@@ -128,11 +128,14 @@ function mergeResults(
 
 // ─── Función principal híbrida ────────────────────────────────────────────────
 
+const RERANK_FINAL = 5   // candidates shown to the LLM after reranking
+const FETCH_LIMIT  = 20  // candidates fetched before reranking
+
 export async function searchTasksByQuery(
   query: string,
   options: { threshold?: number; limit?: number; userId?: string } = {}
 ): Promise<TaskSearchResult[]> {
-  const { threshold = 0.3, limit = 10, userId } = options
+  const { threshold = 0.3, userId } = options
 
   if (!userId) {
     console.error('[rag] userId requerido')
@@ -142,17 +145,32 @@ export async function searchTasksByQuery(
   const intent = detectStructuralIntent(query)
   const hasStructuralIntent = Object.keys(intent).length > 0
 
+  let candidates: TaskSearchResult[]
+
   if (hasStructuralIntent) {
-    // Query estructural + semántica en paralelo
     const [structural, semantic] = await Promise.all([
-      searchTasksByFilter(intent, userId, limit),
-      searchTasksBySemantic(query, userId, threshold, limit),
+      searchTasksByFilter(intent, userId, FETCH_LIMIT),
+      searchTasksBySemantic(query, userId, threshold, FETCH_LIMIT),
     ])
-    return mergeResults(structural, semantic, limit)
+    candidates = mergeResults(structural, semantic, FETCH_LIMIT)
+  } else {
+    candidates = await searchTasksBySemantic(query, userId, threshold, FETCH_LIMIT)
   }
 
-  // Solo semántica para queries abstractas
-  return searchTasksBySemantic(query, userId, threshold, limit)
+  // Rerank only when there are enough candidates to benefit
+  if (candidates.length <= RERANK_FINAL) return candidates
+
+  try {
+    const docs = candidates.map(t => buildTaskContent(t.title, t.description))
+    const ranked = await rerank(query, docs, RERANK_FINAL)
+    return ranked.map(r => ({
+      ...candidates[r.index],
+      similarity: r.relevance_score,
+    }))
+  } catch (err) {
+    console.error('[rag] Rerank falló, usando top candidatos sin rerank:', err)
+    return candidates.slice(0, RERANK_FINAL)
+  }
 }
 
 // ─── Helpers de presentación ──────────────────────────────────────────────────
@@ -203,22 +221,29 @@ export interface ProjectSummary {
 
 export async function getProjectSummary(userId: string): Promise<ProjectSummary> {
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('tasks')
-    .select('status, due_date')
-    .eq('user_id', userId)
 
-  const tasks = data ?? []
+  const [{ data: tasks }, { data: project }] = await Promise.all([
+    supabase.from('tasks').select('status, due_date').eq('user_id', userId),
+    supabase.from('projects').select('delivery_date').eq('user_id', userId)
+      .order('created_at').limit(1).single(),
+  ])
+
+  const allTasks = tasks ?? []
   const now = new Date()
-  const deliveryDate = new Date('2025-05-12')
+
+  // Usar delivery_date de la DB; fallback a hardcoded para compatibilidad pre-migración
+  const deliveryDate = project?.delivery_date
+    ? new Date(project.delivery_date)
+    : new Date('2025-05-12')
+
   const daysLeft = Math.ceil((deliveryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
 
   return {
-    total: tasks.length,
-    done: tasks.filter(t => t.status === 'done').length,
-    in_progress: tasks.filter(t => t.status === 'in_progress').length,
-    todo: tasks.filter(t => t.status === 'todo').length,
-    overdue: tasks.filter(t => t.due_date && new Date(t.due_date) < now && t.status !== 'done').length,
+    total: allTasks.length,
+    done: allTasks.filter(t => t.status === 'done').length,
+    in_progress: allTasks.filter(t => t.status === 'in_progress').length,
+    todo: allTasks.filter(t => t.status === 'todo').length,
+    overdue: allTasks.filter(t => t.due_date && new Date(t.due_date) < now && t.status !== 'done').length,
     daysLeft: Math.max(0, daysLeft),
     deliveryDate: deliveryDate.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }),
   }

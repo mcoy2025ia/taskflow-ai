@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import * as Sentry from '@sentry/nextjs'
 import {
   CreateTaskSchema,
   UpdateTaskSchema,
@@ -47,6 +48,7 @@ export async function createTask(
     .single()
   if (error) return { success: false, error: "Error al crear la tarea" }
   void triggerEmbedding(data.id, parsed.data.title, parsed.data.description)
+  Sentry.addBreadcrumb({ category: 'task', message: 'task.created', data: { taskId: data.id, status: parsed.data.status }, level: 'info' })
   revalidatePath("/board")
   return { success: true, data: { id: data.id } }
 }
@@ -104,7 +106,91 @@ export async function deleteTask(id: string): Promise<ActionResult> {
     .eq("id", id)
     .eq("user_id", user.id)
   if (error) return { success: false, error: "Error al eliminar la tarea" }
+  Sentry.addBreadcrumb({ category: 'task', message: 'task.deleted', data: { taskId: id }, level: 'info' })
   revalidatePath("/board")
+  return { success: true, data: undefined }
+}
+
+export async function assignTask(
+  taskId: string,
+  userId: string
+): Promise<ActionResult> {
+  const { supabase, user } = await getAuthenticatedUser()
+
+  // Verify caller can edit this task: fetch project_id + owner to check role explicitly
+  const { data: task } = await supabase
+    .from('tasks')
+    .select('id, user_id, project_id')
+    .eq('id', taskId)
+    .single()
+
+  if (!task) return { success: false, error: 'Tarea no encontrada' }
+
+  // Personal workspace: only the owner can assign
+  if (!task.project_id) {
+    if (task.user_id !== user.id) {
+      return { success: false, error: 'No tienes permiso para gestionar asignaciones en esta tarea' }
+    }
+  } else {
+    // Shared project: caller must be owner or editor
+    const { data: membership } = await supabase
+      .from('project_members')
+      .select('role')
+      .eq('project_id', task.project_id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!membership || !['owner', 'editor'].includes(membership.role)) {
+      return { success: false, error: 'No tienes permiso de editor en este proyecto' }
+    }
+  }
+
+  const { error } = await supabase
+    .from('task_assignments')
+    .upsert({ task_id: taskId, user_id: userId }, { onConflict: 'task_id,user_id' })
+
+  if (error) return { success: false, error: error.message }
+  return { success: true, data: undefined }
+}
+
+export async function unassignTask(
+  taskId: string,
+  userId: string
+): Promise<ActionResult> {
+  const { supabase, user } = await getAuthenticatedUser()
+
+  const { data: task } = await supabase
+    .from('tasks')
+    .select('id, user_id, project_id')
+    .eq('id', taskId)
+    .single()
+
+  if (!task) return { success: false, error: 'Tarea no encontrada' }
+
+  if (!task.project_id) {
+    if (task.user_id !== user.id) {
+      return { success: false, error: 'No tienes permiso para gestionar asignaciones en esta tarea' }
+    }
+  } else {
+    const { data: membership } = await supabase
+      .from('project_members')
+      .select('role')
+      .eq('project_id', task.project_id)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!membership || !['owner', 'editor'].includes(membership.role)) {
+      return { success: false, error: 'No tienes permiso de editor en este proyecto' }
+    }
+  }
+
+  const { error } = await supabase
+    .from('task_assignments')
+    .delete()
+    .eq('task_id', taskId)
+    .eq('user_id', userId)
+
+  if (error) return { success: false, error: error.message }
   return { success: true, data: undefined }
 }
 
@@ -116,13 +202,20 @@ async function triggerEmbedding(
   try {
     const { signRequest } = await import("@/lib/hmac")
     const path = "/api/embed"
-    const hmacHeaders = await signRequest(path)
-    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}${path}`, {
+    const body = JSON.stringify({ taskId, title, description })
+    const hmacHeaders = await signRequest(path, body)
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...hmacHeaders },
-      body: JSON.stringify({ taskId, title, description }),
+      body,
     })
-  } catch {
-    console.error("[embed] Fallo el trigger para tarea", taskId)
+    if (!res.ok) {
+      const text = await res.text().catch(() => res.status.toString())
+      throw new Error(`HTTP ${res.status}: ${text}`)
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error("[embed] Fallo el trigger para tarea", taskId, "—", message)
+    Sentry.captureException(err, { tags: { taskId }, extra: { title } })
   }
 }

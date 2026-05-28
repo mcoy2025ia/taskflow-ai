@@ -17,11 +17,9 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Public vars needed for `next build` static analysis
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       NEXT_PUBLIC_APP_URL: https://taskflow.vercel.app
-      # Server-side vars consumed at build time
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       EMBED_INTERNAL_SECRET: ${{ secrets.EMBED_INTERNAL_SECRET }}
@@ -34,7 +32,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -57,6 +55,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      # ── Lighthouse CI (solo en PRs y pushes a main) ───────────────────────
+      - name: Lighthouse CI
+        if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
+        run: npx lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
   # ─────────────────────────────────────────────────────────────────────────────
   deploy-production:
     name: Deploy → Vercel Production
@@ -75,7 +80,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies

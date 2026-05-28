@@ -45,6 +45,39 @@ export async function generateQueryEmbedding(query: string): Promise<number[]> {
   return embed(query, "query")
 }
 
+const RERANK_MODEL = 'rerank-2-lite'
+
+export async function rerank(
+  query: string,
+  documents: string[],
+  topK = 5,
+): Promise<{ index: number; relevance_score: number }[]> {
+  if (!documents.length) return []
+
+  const response = await fetch(`${VOYAGE_BASE_URL}/rerank`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${VOYAGE_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: RERANK_MODEL,
+      query,
+      documents,
+      top_k: topK,
+    }),
+  })
+
+  if (!response.ok) {
+    const err = await response.text()
+    console.error(`[Voyage] Rerank error ${response.status}:`, err)
+    throw new Error(`Voyage rerank error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return (data.data ?? []) as { index: number; relevance_score: number }[]
+}
+
 export function buildTaskContent(title: string, description?: string | null): string {
   return description ? `${title}\n\n${description}` : title
 }

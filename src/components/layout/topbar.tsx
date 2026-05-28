@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
-import { Moon, Sun } from 'lucide-react'
+import { Moon, Sun, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const PAGE_META: Record<string, { title: string; sub: string }> = {
@@ -24,7 +24,11 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   },
 }
 
-export function Topbar() {
+interface TopbarProps {
+  onMenuToggle?: () => void
+}
+
+export function Topbar({ onMenuToggle }: TopbarProps) {
   const pathname = usePathname()
   // Read synchronously during init — the inline script in layout.tsx already
   // applied the class before first paint, so this matches without a useEffect.
@@ -44,16 +48,27 @@ export function Topbar() {
   }
 
   return (
-    <header className="h-[52px] flex items-center justify-between px-5 bg-background border-b border-border/50 flex-shrink-0">
-      <div>
-        <h1 className="text-[15px] font-semibold tracking-tight leading-none">
-          {meta.title}
-        </h1>
-        {meta.sub && (
-          <p className="text-[11px] text-muted-foreground mt-0.5 leading-none">
-            {meta.sub}
-          </p>
-        )}
+    <header className="h-[52px] flex items-center justify-between px-3 sm:px-5 bg-background border-b border-border/50 flex-shrink-0">
+      <div className="flex items-center gap-2.5">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden h-8 w-8 text-muted-foreground"
+          onClick={onMenuToggle}
+          title="Abrir menú"
+        >
+          <Menu size={18} />
+        </Button>
+        <div>
+          <h1 className="text-[15px] font-semibold tracking-tight leading-none">
+            {meta.title}
+          </h1>
+          {meta.sub && (
+            <p className="text-[11px] text-muted-foreground mt-0.5 leading-none hidden sm:block">
+              {meta.sub}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
@@ -63,6 +78,7 @@ export function Topbar() {
           className="h-8 w-8 text-muted-foreground"
           onClick={toggleTheme}
           title={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          suppressHydrationWarning
         >
           {isDark ? <Sun size={15} /> : <Moon size={15} />}
         </Button>

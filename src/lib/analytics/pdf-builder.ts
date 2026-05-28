@@ -77,7 +77,10 @@ function parseAuditSections(text: string): Array<{ heading: string; body: string
     const isHeading = sectionPatterns.some(p => p.test(trimmed))
     if (isHeading) {
       if (current) sections.push(current)
-      current = { heading: trimmed, body: '' }
+      const colonIdx = trimmed.indexOf(':')
+      const heading = colonIdx !== -1 ? trimmed.slice(0, colonIdx).trim() : trimmed
+      const initialBody = colonIdx !== -1 ? trimmed.slice(colonIdx + 1).trim() : ''
+      current = { heading, body: initialBody }
     } else {
       if (current) current.body += (current.body ? ' ' : '') + trimmed
     }
@@ -96,9 +99,11 @@ function renderAuditPage(doc: any, audit: string, projectName: string): void {
 
   doc.addPage()
 
-  // Encabezado de página — fondo rojo oscuro
-  doc.setFillColor(185, 28, 28)
+  // Encabezado de página — fondo cyber negro
+  doc.setFillColor(15, 23, 42)
   doc.rect(0, 0, pageW, 22, 'F')
+  doc.setFillColor(29, 112, 232)
+  doc.rect(0, 21, pageW, 1, 'F')
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
@@ -136,8 +141,10 @@ function renderAuditPage(doc: any, audit: string, projectName: string): void {
     // Salto de página si no cabe
     if (y + blockH > pageH - 14) {
       doc.addPage()
-      doc.setFillColor(185, 28, 28)
+      doc.setFillColor(15, 23, 42)
       doc.rect(0, 0, pageW, 10, 'F')
+      doc.setFillColor(29, 112, 232)
+      doc.rect(0, 9, pageW, 1, 'F')
       doc.setTextColor(255, 255, 255)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(8)
@@ -194,19 +201,40 @@ export async function buildAnalyticsPDF({
   const contentW = pageW - margin * 2
 
   // ── Portada ───────────────────────────────────────────────────────────────
-  doc.setFillColor(79, 70, 229)
+  // Dark cyber background
+  doc.setFillColor(15, 23, 42)
   doc.rect(0, 0, pageW, 55, 'F')
+  
+  // Blue accent line
+  doc.setFillColor(29, 112, 232)
+  doc.rect(0, 53, pageW, 2, 'F')
+
+  // MCOY brand text on top left
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(22)
-  doc.text('TaskFlow AI', margin, 28)
+  doc.text('MCO', margin, 26)
+  doc.setTextColor(29, 112, 232)
+  doc.text('Y', margin + 20, 26)
+
+  // AI + DATA STRATEGY subtitle
+  doc.setFontSize(8)
+  doc.setTextColor(148, 163, 184)
+  doc.setFont('helvetica', 'bold')
+  doc.text('AI + DATA STRATEGY', margin + 30, 26)
+
+  // Main title
+  doc.setTextColor(255, 255, 255)
   doc.setFontSize(13)
   doc.setFont('helvetica', 'normal')
-  doc.text('Informe Ejecutivo del Proyecto', margin, 39)
-  doc.setFontSize(9)
+  doc.text('Informe Ejecutivo del Proyecto', margin, 42)
+  
+  // Date
+  doc.setFontSize(8)
+  doc.setTextColor(148, 163, 184)
   doc.text(
     new Date().toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }),
-    margin, 50
+    pageW - margin - 35, 42
   )
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
@@ -266,12 +294,15 @@ export async function buildAnalyticsPDF({
 
   // ── Página 2: progreso por fase ───────────────────────────────────────────
   doc.addPage()
-  doc.setFillColor(79, 70, 229)
+  // Dark cyber header with blue accent line
+  doc.setFillColor(15, 23, 42)
   doc.rect(0, 0, pageW, 18, 'F')
+  doc.setFillColor(29, 112, 232)
+  doc.rect(0, 17, pageW, 1, 'F')
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(11)
-  doc.text('Progreso por Fase del Pipeline', margin, 12)
+  doc.text('Progreso por Fase del Pipeline', margin, 11)
 
   doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'bold')

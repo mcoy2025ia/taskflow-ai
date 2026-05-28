@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { generateEmbedding, buildTaskContent, hashContent } from "@/lib/ai/voyage"
 import { verifyHmacRequest } from "@/lib/hmac"
+import { ratelimit } from "@/lib/ratelimit"
 
 function createServiceClient() {
   return createClient(
@@ -11,6 +12,13 @@ function createServiceClient() {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting: 100 req/min por origin (antes de verificar HMAC para evitar timing oracle)
+  const origin = request.headers.get('origin') ?? request.headers.get('host') ?? 'unknown'
+  const { limited, headers: rlHeaders } = await ratelimit.embed(origin)
+  if (limited) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: rlHeaders })
+  }
+
   const clonedReq = request.clone()
   const isValid = await verifyHmacRequest(clonedReq)
   if (!isValid) {
@@ -18,6 +26,7 @@ export async function POST(request: NextRequest) {
   }
   let taskId: string, title: string, description: string | undefined
   try {
+    // verifyHmacRequest consumed the clone; read body from original
     const body = await request.json()
     taskId = body.taskId
     title = body.title

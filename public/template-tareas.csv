@@ -1,0 +1,15 @@
+title,description,status,priority,due_date
+Setup infraestructura base,Configurar repositorio Git y Docker Compose con PostgreSQL y MLflow,todo,high,2026-04-05
+Descarga y validación dataset Olist,Descargar los 9 archivos CSV de Olist y ejecutar DQ report inicial,todo,high,2026-04-10
+ETL Bronze Layer,Pipeline de ingesta cruda con particionado por fecha y hash de deduplicación,in_progress,high,2026-04-18
+ETL Silver Layer,Limpieza y normalización de tipos correctos y métricas derivadas,todo,medium,2026-04-25
+Modelado Star Schema Gold,Diseñar y poblar fact_orders y dimensiones en PostgreSQL,todo,medium,2026-04-30
+Feature Engineering RFM,Calcular RFM y lag features de 30-60-90 días para segmentación de clientes,todo,high,2026-05-05
+Modelo XGBoost Churn,Entrenar XGBoost con Optuna para predicción de churn en 90 días,todo,high,2026-05-10
+Segmentación K-Means,Implementar clustering de clientes con DBSCAN y K-Means validado con Silhouette,todo,medium,2026-05-12
+Dashboard Streamlit,Implementar dashboard con mapa coroplético e indicadores year-over-year,todo,medium,2026-05-15
+FastAPI y Redis Cache,Exponer endpoints de predicción con caché Redis y rate limiting,todo,medium,2026-05-18
+Containerización Docker,Empaquetar servicios en Docker Compose y deploy en Cloud Run staging,todo,low,2026-05-20
+Monitoreo con Evidently,Configurar data drift monitoring y alertas automáticas con Evidently AI,todo,medium,2026-05-22
+Pruebas de carga Locust,Ejecutar suite de pruebas de carga y documentar resultados en MkDocs,todo,low,2026-05-24
+Demo final cliente,Preparar y ejecutar demo ejecutiva con slides y métricas de negocio,done,high,2026-05-27

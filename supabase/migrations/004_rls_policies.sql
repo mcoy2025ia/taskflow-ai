@@ -2,7 +2,7 @@
 -- SECURITY DEFINER: se ejecuta con privilegios del owner (postgres)
 -- pero aplica el filtro user_id internamente → usuarios solo ven sus tareas
 create or replace function public.search_tasks_by_embedding(
-  query_embedding halfvec(1024),
+  query_embedding halfvec(512),
   match_threshold float default 0.7,
   match_count     int    default 5
 )
@@ -43,7 +43,7 @@ $$;
 create or replace function public.upsert_task_embedding(
   p_task_id      uuid,
   p_user_id      uuid,
-  p_embedding    halfvec(1024),
+  p_embedding    halfvec(512),
   p_content_hash text
 )
 returns void
