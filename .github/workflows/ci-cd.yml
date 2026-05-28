@@ -22,10 +22,13 @@ jobs:
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      NEXT_PUBLIC_APP_URL: https://taskflow.vercel.app
-      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
       EMBED_INTERNAL_SECRET: ${{ secrets.EMBED_INTERNAL_SECRET }}
+      UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+      UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+      NEXT_PUBLIC_APP_URL: https://taskflow.vercel.app
       CHAT_PROVIDER: groq
 
     steps:
@@ -58,9 +61,9 @@ jobs:
       - name: Build
         run: npm run build
 
-      # ── Lighthouse CI (solo en PRs y pushes a main) ───────────────────────
+      # ── Lighthouse CI (solo en PRs y pushes a main, si el token está configurado) ──
       - name: Lighthouse CI
-        if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
+        if: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') && secrets.LHCI_GITHUB_APP_TOKEN != '' }}
         run: npx lhci autorun
         env:
           LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
