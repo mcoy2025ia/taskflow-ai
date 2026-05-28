@@ -46,7 +46,8 @@ export function TaskDrawer({ task, members, currentUserId, onClose }: TaskDrawer
       setIsLoading(false)
       if (result.success) setComments(result.data)
     })
-  }, [task?.id])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.id])  // solo re-fetch cuando cambia el ID, no cada vez que cambia una propiedad
 
   // Scroll to bottom when new comments arrive
   useEffect(() => {

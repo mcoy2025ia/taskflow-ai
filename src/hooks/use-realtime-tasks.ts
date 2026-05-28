@@ -68,7 +68,5 @@ export function useRealtimeTasks({ projectId, currentUserId }: UseRealtimeTasksO
     return () => {
       supabase.removeChannel(channel)
     }
-  // currentUserId is stable per session; projectId changes trigger re-subscribe
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, currentUserId])
 }

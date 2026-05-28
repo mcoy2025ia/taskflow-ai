@@ -4,15 +4,11 @@ import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { acceptInvitation } from '@/actions/invite.actions'
 import { toast } from 'sonner'
-import { useActiveProjectSafe } from '@/contexts/active-project'
 import { cn } from '@/lib/utils'
 
 export function AcceptInviteButton({ token }: { token: string }) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
-  const projectCtx = useActiveProjectSafe()
-  const setActiveProject = projectCtx?.setActiveProject ?? null
-
   function handleAccept() {
     startTransition(async () => {
       const result = await acceptInvitation(token)
