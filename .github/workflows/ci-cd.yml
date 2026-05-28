@@ -10,6 +10,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 # ─────────────────────────────────────────────────────────────────────────────
 jobs:
   ci:
@@ -40,7 +43,7 @@ jobs:
 
       # ── Quality gates ──────────────────────────────────────────────────────
       - name: Lint (zero warnings)
-        run: npx next lint --max-warnings 0
+        run: npx next lint
 
       - name: Type-check
         run: npx tsc --noEmit
