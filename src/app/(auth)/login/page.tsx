@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { LoginForm } from '@/components/auth/login-form'
+import { GuestButton } from '@/components/auth/guest-button'
 import { Zap } from 'lucide-react'
 import Link from 'next/link'
 
@@ -28,15 +29,18 @@ export default function LoginPage() {
           <LoginForm />
         </div>
 
-        <p className="text-center text-sm text-muted-foreground mt-4">
-          ¿No tienes cuenta?{' '}
-          <Link
-            href="/register"
-            className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
-          >
-            Regístrate gratis
-          </Link>
-        </p>
+        <div className="flex flex-col items-center gap-2 mt-4">
+          <p className="text-center text-sm text-muted-foreground">
+            ¿No tienes cuenta?{' '}
+            <Link
+              href="/register"
+              className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+            >
+              Regístrate gratis
+            </Link>
+          </p>
+          <GuestButton />
+        </div>
       </div>
     </div>
   )

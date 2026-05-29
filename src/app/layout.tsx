@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import Script from 'next/script'
 
 import { Toaster } from 'sonner'
 import './globals.css'
@@ -44,22 +43,14 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
-      <body className={`${geist.variable} ${geistMono.variable} antialiased`}>
-        {/*
-          Script de inicialización de tema — debe correr ANTES del primer paint.
-          strategy="beforeInteractive" hace que Next.js lo inyecte en el <head>
-          del HTML generado en el servidor, FUERA del árbol de React JSX.
-          Esto evita el warning de React 19: "Scripts inside React components
-          are never executed when rendering on the client" porque Next.js lo
-          gestiona directamente en el HTML, sin pasar por el reconciliador.
-        */}
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
+      <head>
+        <script
           dangerouslySetInnerHTML={{
             __html: `try{var t=localStorage.getItem('theme'),p=window.matchMedia('(prefers-color-scheme: dark)').matches;if(t==='dark'||(!t&&p))document.documentElement.classList.add('dark')}catch{}`
           }}
         />
+      </head>
+      <body className={`${geist.variable} ${geistMono.variable} antialiased`}>
         {children}
         <Toaster position="bottom-right" richColors />
       </body>

@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { env } from '@/lib/env'
 import { redirect } from 'next/navigation'
 
 type ActionResult = { success: true } | { success: false; error: string }
@@ -51,4 +52,20 @@ export async function signUp(
   if (error) return { success: false, error: error.message }
 
   redirect('/board')
+}
+
+export async function signInAsGuest(): Promise<ActionResult> {
+  if (!env.DEMO_EMAIL || !env.DEMO_PASSWORD) {
+    return { success: false, error: 'Demo no configurada.' }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.signInWithPassword({
+    email: env.DEMO_EMAIL,
+    password: env.DEMO_PASSWORD,
+  })
+
+  if (error) return { success: false, error: 'No se pudo iniciar la sesión demo.' }
+
+  return { success: true }
 }

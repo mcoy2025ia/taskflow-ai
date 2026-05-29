@@ -22,6 +22,10 @@ const envSchema = z.object({
   // Rate limiting (opcional — sin Upstash el rate limit está desactivado)
   UPSTASH_REDIS_REST_URL:   z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+
+  // Cuenta demo (fallback si Anonymous Sign-Ins no está habilitado en Supabase)
+  DEMO_EMAIL:    z.string().email().optional(),
+  DEMO_PASSWORD: z.string().min(1).optional(),
 })
 
 function validateEnv() {
