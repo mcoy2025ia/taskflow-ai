@@ -38,6 +38,9 @@ export function useAnalytics(): AnalyticsState {
     // Fetch project first, then scope tasks to that project_id.
     // Previously tasks had no filter → mixed tasks from multiple projects.
     const load = async () => {
+      setLoading(true)
+      setError(null)
+
       const { data: projectData, error: projErr } = await supabase
         .from('projects')
         .select('id, name, start_date, delivery_date')
@@ -78,13 +81,20 @@ export function useAnalytics(): AnalyticsState {
       }
     }
 
-    load()
-      .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : 'Error al cargar analítica'
-        console.error('[use-analytics]', message)
-        setError(message)
-      })
-      .finally(() => setLoading(false))
+    const run = () =>
+      load()
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : 'Error al cargar analítica'
+          console.error('[use-analytics]', message)
+          setError(message)
+        })
+        .finally(() => setLoading(false))
+
+    run()
+
+    // Re-fetch when the agent or CSV import triggers a board update
+    window.addEventListener('taskflow:board_update', run)
+    return () => window.removeEventListener('taskflow:board_update', run)
   }, [])
 
   if (loading || error) {

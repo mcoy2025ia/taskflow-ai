@@ -195,8 +195,11 @@ export function CsvImport({
       return
     }
     setPhase({ id: 'done', result: result.data })
-    // Refresca el server component (board / analytics) para mostrar las tareas recién insertadas
-    if (result.data.inserted > 0) router.refresh()
+    if (result.data.inserted > 0) {
+      router.refresh()
+      // Notify analytics hook to re-fetch (useEffect can't detect router.refresh)
+      window.dispatchEvent(new CustomEvent('taskflow:board_update'))
+    }
   }
 
   // ── Render helpers ─────────────────────────────────────────────────────────
