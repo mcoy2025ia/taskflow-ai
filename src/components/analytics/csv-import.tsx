@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { importTasksCSV, type ImportResult } from '@/actions/import.actions'
+import { importTasksCSV, generateTasksCSV, type ImportResult } from '@/actions/import.actions'
 
 // ── Design tokens (same as analytics page) ───────────────────────────────────
 const T = {
@@ -135,6 +135,7 @@ export function CsvImport({
 }) {
   const [phase, setPhase] = useState<Phase>({ id: 'idle' })
   const [dragOver, setDragOver] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -183,6 +184,24 @@ export function CsvImport({
     e.preventDefault(); setDragOver(false)
     const f = e.dataTransfer.files?.[0]
     if (f) processFile(f)
+  }
+
+  // ── AI CSV generation ──────────────────────────────────────────────────────
+  async function handleGenerate() {
+    setIsGenerating(true)
+    setPhase({ id: 'idle' })
+    const result = await generateTasksCSV()
+    setIsGenerating(false)
+    if (!result.success) {
+      setPhase({ id: 'error', message: result.error })
+      return
+    }
+    const { headers, rows } = parseCSV(result.csv)
+    if (rows.length === 0) {
+      setPhase({ id: 'error', message: 'El modelo generó un CSV vacío. Intenta de nuevo.' })
+      return
+    }
+    setPhase({ id: 'parsed', fileName: `medallion-ml-${new Date().toISOString().slice(0,10)}.csv`, headers, rows })
   }
 
   // ── Import ─────────────────────────────────────────────────────────────────
@@ -234,21 +253,51 @@ export function CsvImport({
               Máximo <b style={{ color: '#f0f4ff' }}>500 filas</b> por importación.
             </p>
           </div>
-          <button
-            onClick={downloadTemplate}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '0.5rem 1rem', borderRadius: 10, border: `1px solid ${T.border2}`,
-              background: T.surface2, color: T.text, fontSize: '0.72rem',
-              fontWeight: 600, cursor: 'pointer', fontFamily: T.font,
-              whiteSpace: 'nowrap', flexShrink: 0,
-              transition: 'border-color 0.2s, background 0.2s',
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(29,112,232,0.4)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = T.border2 }}
-          >
-            ↓ Descargar plantilla
-          </button>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+            {/* Generar con IA */}
+            <button
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '0.5rem 1rem', borderRadius: 10, border: 'none',
+                background: isGenerating
+                  ? 'rgba(139,92,246,0.4)'
+                  : 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                color: '#fff', fontSize: '0.72rem',
+                fontWeight: 700, cursor: isGenerating ? 'not-allowed' : 'pointer',
+                fontFamily: T.font, whiteSpace: 'nowrap',
+                boxShadow: isGenerating ? 'none' : '0 4px 14px rgba(139,92,246,0.4)',
+                transition: 'opacity 0.2s, transform 0.2s',
+                opacity: isGenerating ? 0.7 : 1,
+              }}
+            >
+              {isGenerating ? (
+                <>
+                  <span style={{ width: 11, height: 11, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', animation: 'mcoySpinA 0.7s linear infinite', display: 'inline-block', flexShrink: 0 }} />
+                  Generando…
+                </>
+              ) : (
+                <>✨ Generar con IA</>
+              )}
+            </button>
+            {/* Descargar plantilla */}
+            <button
+              onClick={downloadTemplate}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '0.5rem 1rem', borderRadius: 10, border: `1px solid ${T.border2}`,
+                background: T.surface2, color: T.text, fontSize: '0.72rem',
+                fontWeight: 600, cursor: 'pointer', fontFamily: T.font,
+                whiteSpace: 'nowrap',
+                transition: 'border-color 0.2s, background 0.2s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(29,112,232,0.4)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = T.border2 }}
+            >
+              ↓ Descargar plantilla
+            </button>
+          </div>
         </div>
       </div>
 
