@@ -35,29 +35,50 @@ export function useAnalytics(): AnalyticsState {
   useEffect(() => {
     const supabase = createClient()
 
-    Promise.all([
-      supabase.from('tasks').select('status, priority, due_date, created_at, title'),
-      supabase.from('projects').select('id, name, start_date, delivery_date')
-        .order('created_at').limit(1).single(),
-    ])
-      .then(async ([{ data: taskData, error: taskErr }, { data: projectData, error: projErr }]) => {
-        if (taskErr) throw taskErr
-        if (projErr && projErr.code !== 'PGRST116') throw projErr // PGRST116 = no rows (sin proyecto)
+    // Fetch project first, then scope tasks to that project_id.
+    // Previously tasks had no filter → mixed tasks from multiple projects.
+    const load = async () => {
+      const { data: projectData, error: projErr } = await supabase
+        .from('projects')
+        .select('id, name, start_date, delivery_date')
+        .order('created_at')
+        .limit(1)
+        .single()
 
-        setTasks((taskData as TaskRow[]) ?? [])
+      if (projErr && projErr.code !== 'PGRST116') throw projErr
 
-        if (projectData) {
-          setProject(projectData as Project)
-          const { data: phaseData, error: phaseErr } = await supabase
+      const taskQuery = projectData
+        ? supabase
+            .from('tasks')
+            .select('status, priority, due_date, created_at, title')
+            .eq('project_id', (projectData as Project).id)
+        : supabase
+            .from('tasks')
+            .select('status, priority, due_date, created_at, title')
+            .is('project_id', null)
+
+      const phaseQuery = projectData
+        ? supabase
             .from('project_phases')
             .select('name, total, done, color, sort_order')
             .eq('project_id', (projectData as Project).id)
             .order('sort_order')
+        : Promise.resolve({ data: [] as PhaseRow[], error: null })
 
-          if (phaseErr) throw phaseErr
-          setPhases((phaseData as PhaseRow[]) ?? [])
-        }
-      })
+      const [{ data: taskData, error: taskErr }, { data: phaseData, error: phaseErr }] =
+        await Promise.all([taskQuery, phaseQuery])
+
+      if (taskErr) throw taskErr
+      if (phaseErr) throw phaseErr
+
+      setTasks((taskData as TaskRow[]) ?? [])
+      if (projectData) {
+        setProject(projectData as Project)
+        setPhases((phaseData as PhaseRow[]) ?? [])
+      }
+    }
+
+    load()
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : 'Error al cargar analítica'
         console.error('[use-analytics]', message)

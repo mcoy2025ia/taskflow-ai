@@ -147,6 +147,13 @@ export function useChatStream({ initialSessionId, onVoiceResponse }: UseChatStre
               })
             } else if (data.type === 'board_update') {
               window.dispatchEvent(new CustomEvent('taskflow:board_update'))
+            } else if (data.type === 'error') {
+              accumulated = `⚠️ ${data.message ?? 'Error desconocido del agente.'}`
+              startTransition(() => {
+                setMessages(prev => prev.map(m =>
+                  m.id === assistantId ? { ...m, content: accumulated } : m
+                ))
+              })
             }
           } catch { continue }
         }
