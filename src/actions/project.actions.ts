@@ -11,6 +11,7 @@ export interface ProjectSummary {
   start_date: string
   delivery_date: string
   role: 'owner' | 'editor' | 'viewer'
+  task_count: number
 }
 
 type ActionResult<T> =
@@ -29,7 +30,7 @@ export async function getProjects(): Promise<ActionResult<ProjectSummary[]>> {
 
   const supabase = await createClient()
 
-  const [{ data: projectsData, error }, { data: memberships }] = await Promise.all([
+  const [{ data: projectsData, error }, { data: memberships }, { data: taskCounts }] = await Promise.all([
     supabase
       .from('projects')
       .select('id, name, start_date, delivery_date, user_id')
@@ -38,19 +39,33 @@ export async function getProjects(): Promise<ActionResult<ProjectSummary[]>> {
       .from('project_members')
       .select('project_id, role')
       .eq('user_id', user.id),
+    supabase
+      .from('tasks')
+      .select('project_id')
+      .not('project_id', 'is', null),
   ])
 
   if (error) return { success: false, error: error.message }
 
   const roleMap = new Map(memberships?.map(m => [m.project_id, m.role as ProjectSummary['role']]) ?? [])
 
-  const projects = (projectsData ?? []).map(p => ({
-    id: p.id,
-    name: p.name,
-    start_date: p.start_date as string,
-    delivery_date: p.delivery_date as string,
-    role: roleMap.get(p.id) ?? (p.user_id === user.id ? 'owner' : 'viewer') as ProjectSummary['role'],
-  }))
+  // Count tasks per project
+  const countMap = new Map<string, number>()
+  for (const t of taskCounts ?? []) {
+    if (t.project_id) countMap.set(t.project_id, (countMap.get(t.project_id) ?? 0) + 1)
+  }
+
+  const projects = (projectsData ?? [])
+    .map(p => ({
+      id: p.id,
+      name: p.name,
+      start_date: p.start_date as string,
+      delivery_date: p.delivery_date as string,
+      role: roleMap.get(p.id) ?? (p.user_id === user.id ? 'owner' : 'viewer') as ProjectSummary['role'],
+      task_count: countMap.get(p.id) ?? 0,
+    }))
+    // Most active project first
+    .sort((a, b) => b.task_count - a.task_count)
 
   return { success: true, data: projects }
 }

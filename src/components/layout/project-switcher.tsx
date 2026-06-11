@@ -41,8 +41,9 @@ export function ProjectSwitcher() {
         } else {
           const stored = result.data.find(p => p.id === activeProject?.id)
           if (!stored && result.data.length > 0) {
-            const first = result.data[0]
-            setActiveProject({ id: first.id, name: first.name, role: first.role })
+            // Auto-select most active project (already sorted by task_count DESC)
+            const best = result.data[0]
+            setActiveProject({ id: best.id, name: best.name, role: best.role })
           }
         }
       }
@@ -106,6 +107,7 @@ export function ProjectSwitcher() {
           start_date: today,
           delivery_date: today,
           role: 'owner',
+          task_count: 0,
         }
         setProjects(prev => [...prev, created])
         setActiveProject({ id: created.id, name: created.name, role: 'owner' })
@@ -153,7 +155,7 @@ export function ProjectSwitcher() {
               <p className="px-2.5 py-1 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
                 Proyectos
               </p>
-              {projects.map(p => (
+              {projects.filter(p => p.task_count > 0).map(p => (
                 <button
                   key={p.id}
                   onClick={() => handleSelect(p)}

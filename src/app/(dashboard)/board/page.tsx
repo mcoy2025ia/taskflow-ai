@@ -26,17 +26,28 @@ async function BoardTasks({ projectId }: { projectId?: string }) {
 
   const supabase = await createClient()
 
-  // Resolve project_id: use param or fallback to user's first project
+  // Resolve project_id: use param or fallback to most active project (most tasks)
   let resolvedProjectId = projectId
   if (!resolvedProjectId) {
-    const { data: firstProject } = await supabase
+    const { data: projects } = await supabase
       .from('projects')
       .select('id')
       .eq('user_id', user.id)
-      .order('created_at')
-      .limit(1)
-      .maybeSingle()
-    resolvedProjectId = firstProject?.id
+
+    if (projects && projects.length > 0) {
+      // Pick the project with the most tasks
+      const counts = await Promise.all(
+        projects.map(async p => {
+          const { count } = await supabase
+            .from('tasks')
+            .select('id', { count: 'exact', head: true })
+            .eq('project_id', p.id)
+          return { id: p.id, count: count ?? 0 }
+        })
+      )
+      const best = counts.sort((a, b) => b.count - a.count)[0]
+      resolvedProjectId = best?.id
+    }
     // Redirect so the URL always carries project_id — keeps client context in sync
     if (resolvedProjectId) {
       redirect(`/board?project_id=${resolvedProjectId}`)
