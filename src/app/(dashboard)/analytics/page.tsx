@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useAnalytics } from '@/hooks/use-analytics'
 import { useActiveProjectSafe } from '@/contexts/active-project'
 import type { TaskRow } from '@/lib/analytics/metrics'
@@ -280,8 +281,10 @@ function SectionHeader({ eyebrow, title }: { eyebrow: string; title: string }) {
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────
 export default function AnalyticsPage() {
+  const searchParams = useSearchParams()
   const projectCtx = useActiveProjectSafe()
-  const { loading, error, tasks, project, metrics, endDate } = useAnalytics(projectCtx?.activeProject?.id)
+  const projectId = searchParams.get('project_id') ?? projectCtx?.activeProject?.id
+  const { loading, error, tasks, project, metrics, endDate } = useAnalytics(projectId)
   const [isExporting, setIsExporting] = useState(false)
 
   const roleStats = useMemo(() => ROLES.map(r => {

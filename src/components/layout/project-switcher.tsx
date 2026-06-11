@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useTransition } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { ChevronsUpDown, Check, Plus, FolderKanban, UserPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useActiveProject } from '@/contexts/active-project'
@@ -20,6 +20,8 @@ export function ProjectSwitcher() {
   const [projects, setProjects] = useState<ProjectSummary[]>([])
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const urlProjectId = searchParams.get('project_id')
   const [isOpen, setIsOpen] = useState(false)
   const [showNewForm, setShowNewForm] = useState(false)
   const [showInviteForm, setShowInviteForm] = useState(false)
@@ -29,19 +31,17 @@ export function ProjectSwitcher() {
   const [isPending, startTransition] = useTransition()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Load projects once on mount
   useEffect(() => {
     getProjects().then(result => {
       if (result.success) {
         setProjects(result.data)
-        // URL project_id always wins over stored localStorage value
-        const urlProjectId = new URLSearchParams(window.location.search).get('project_id')
-        const urlMatch = urlProjectId ? result.data.find(p => p.id === urlProjectId) : null
-        if (urlMatch) {
-          setActiveProject({ id: urlMatch.id, name: urlMatch.name, role: urlMatch.role })
+        const match = urlProjectId ? result.data.find(p => p.id === urlProjectId) : null
+        if (match) {
+          setActiveProject({ id: match.id, name: match.name, role: match.role })
         } else {
           const stored = result.data.find(p => p.id === activeProject?.id)
           if (!stored && result.data.length > 0) {
-            // Auto-select most active project (already sorted by task_count DESC)
             const best = result.data[0]
             setActiveProject({ id: best.id, name: best.name, role: best.role })
           }
@@ -50,6 +50,16 @@ export function ProjectSwitcher() {
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Sync context whenever the URL project_id changes (e.g., board redirect)
+  useEffect(() => {
+    if (!urlProjectId || projects.length === 0) return
+    const match = projects.find(p => p.id === urlProjectId)
+    if (match && match.id !== activeProject?.id) {
+      setActiveProject({ id: match.id, name: match.name, role: match.role })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlProjectId, projects])
 
   // Close dropdown on outside click
   useEffect(() => {
