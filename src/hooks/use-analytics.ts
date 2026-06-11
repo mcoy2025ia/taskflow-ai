@@ -22,8 +22,7 @@ export interface AnalyticsState {
   endDate: Date | null
 }
 
-const FALLBACK_START = new Date().toISOString().slice(0, 10)
-const FALLBACK_END   = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
+const FALLBACK_END = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
 
 export function useAnalytics(projectId?: string | null): AnalyticsState {
   const [loading, setLoading]   = useState(true)
@@ -102,12 +101,24 @@ export function useAnalytics(projectId?: string | null): AnalyticsState {
     return { loading, error, tasks, project, metrics: null, startDate: null, endDate: null }
   }
 
-  const startRaw  = project?.start_date  ?? FALLBACK_START
-  const endRaw    = project?.delivery_date ?? FALLBACK_END
+  const endRaw = project?.delivery_date ?? FALLBACK_END
+
+  // Infer start date as 90 days before delivery when not set (treat as 3-month project)
+  const startRaw = project?.start_date
+    ?? new Date(parseUTCDate(endRaw).getTime() - 90 * 86400000).toISOString().slice(0, 10)
+
+  const today    = new Date()
+  const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()))
+
+  const pctQuick = tasks.length > 0
+    ? Math.round(tasks.filter(t => t.status === 'done').length / tasks.length * 100)
+    : 0
+
+  // When ≥90% done, cap delivery date to today + 15 days so velocity reflects reality
+  const endDate   = pctQuick >= 90
+    ? new Date(todayUTC.getTime() + 15 * 86400000)
+    : parseUTCDate(endRaw)
   const startDate = parseUTCDate(startRaw)
-  const endDate   = parseUTCDate(endRaw)
-  const today     = new Date()
-  const todayUTC  = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()))
 
   const metrics = computeMetrics(tasks, phases, startDate, endDate, todayUTC)
 

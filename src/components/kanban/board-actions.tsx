@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
-import { Database, Trash2, Loader2, AlertTriangle } from 'lucide-react'
+import { Trash2, Loader2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,29 +11,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { seedOlistTasks, deleteAllTasks } from '@/actions/project.actions'
+import { deleteAllTasks } from '@/actions/project.actions'
 
 interface BoardActionsProps {
   projectId: string | null
 }
 
 export function BoardActions({ projectId }: BoardActionsProps) {
-  const [isSeedPending, startSeedTransition] = useTransition()
   const [isDeletePending, startDeleteTransition] = useTransition()
   const [deleteOpen, setDeleteOpen] = useState(false)
-
-  function handleSeed() {
-    startSeedTransition(async () => {
-      const result = await seedOlistTasks(projectId)
-      if (result.success) {
-        toast.success(
-          `✅ ${result.data.count} tareas Olist creadas — los embeddings se generan en segundo plano.`
-        )
-      } else {
-        toast.error(`Error al poblar: ${result.error}`)
-      }
-    })
-  }
 
   function handleDeleteAll() {
     startDeleteTransition(async () => {
@@ -49,23 +35,6 @@ export function BoardActions({ projectId }: BoardActionsProps) {
 
   return (
     <div className="flex items-center gap-2 shrink-0">
-      {/* ── Poblar con tareas Olist ── */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleSeed}
-        disabled={isSeedPending}
-        className="gap-1.5 text-xs h-8"
-        title="Genera 60+ tareas del proyecto Olist (datos, ML, IA, Streamlit)"
-      >
-        {isSeedPending ? (
-          <Loader2 size={13} className="animate-spin" />
-        ) : (
-          <Database size={13} />
-        )}
-        {isSeedPending ? 'Generando...' : 'Poblar Olist'}
-      </Button>
-
       {/* ── Borrar todas las tareas (con confirmación) ── */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogTrigger
