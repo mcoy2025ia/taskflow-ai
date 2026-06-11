@@ -12,10 +12,11 @@ const WELCOME: ChatUIMessage = {
 
 interface UseChatStreamOptions {
   initialSessionId: string | null
+  activeProjectId?: string | null
   onVoiceResponse?: (text: string) => void
 }
 
-export function useChatStream({ initialSessionId, onVoiceResponse }: UseChatStreamOptions) {
+export function useChatStream({ initialSessionId, activeProjectId, onVoiceResponse }: UseChatStreamOptions) {
   const [, startTransition] = useTransition()
   const [messages, setMessages] = useState<ChatUIMessage[]>([WELCOME])
   const [sessionId, setSessionId] = useState<string | null>(initialSessionId)
@@ -84,7 +85,7 @@ export function useChatStream({ initialSessionId, onVoiceResponse }: UseChatStre
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage, history, voiceMode: isVoice }),
+        body: JSON.stringify({ message: userMessage, history, voiceMode: isVoice, projectId: activeProjectId ?? null }),
         signal: abortRef.current.signal,
       })
 

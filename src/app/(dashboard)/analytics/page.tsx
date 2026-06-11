@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useAnalytics } from '@/hooks/use-analytics'
+import { useActiveProjectSafe } from '@/contexts/active-project'
 import type { TaskRow } from '@/lib/analytics/metrics'
 
 // ─────────────────────────────────────────────────────────────
@@ -279,7 +280,8 @@ function SectionHeader({ eyebrow, title }: { eyebrow: string; title: string }) {
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────
 export default function AnalyticsPage() {
-  const { loading, error, tasks, project, metrics, endDate } = useAnalytics()
+  const projectCtx = useActiveProjectSafe()
+  const { loading, error, tasks, project, metrics, endDate } = useAnalytics(projectCtx?.activeProject?.id)
   const [isExporting, setIsExporting] = useState(false)
 
   const roleStats = useMemo(() => ROLES.map(r => {

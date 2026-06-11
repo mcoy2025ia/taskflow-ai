@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { useChatStream } from '@/hooks/use-chat-stream'
 import { useVoiceInput } from '@/hooks/use-voice-input'
 import { useChatTTS } from '@/hooks/use-chat-tts'
+import { useActiveProjectSafe } from '@/contexts/active-project'
 import { MessageContent, ToolActivityList, ConfirmCard, SourceChips } from './message-renderer'
 
 export interface ChatInterfaceProps {
@@ -16,12 +17,13 @@ export interface ChatInterfaceProps {
 
 export function ChatInterface({ initialSessionId = null }: ChatInterfaceProps) {
   const [input, setInput] = useState('')
+  const projectCtx = useActiveProjectSafe()
   const { isSpeaking, speakText, stopSpeaking } = useChatTTS()
   const {
     messages, isStreaming, highlightedSource,
     sendMessage, handleConfirm, handleCancel, handleCiteClick,
     bottomRef, scrollContainerRef, handleScroll,
-  } = useChatStream({ initialSessionId, onVoiceResponse: speakText })
+  } = useChatStream({ initialSessionId, activeProjectId: projectCtx?.activeProject?.id, onVoiceResponse: speakText })
   const { isListening, voiceMode, setVoiceMode, startVoiceInput } = useVoiceInput({
     onTranscript: setInput,
     onSubmit: (text) => { setInput(''); sendMessage(text, true) },

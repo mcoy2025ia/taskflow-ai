@@ -222,14 +222,18 @@ export interface ProjectSummary {
   deliveryDate: string
 }
 
-export async function getProjectSummary(userId: string): Promise<ProjectSummary> {
+export async function getProjectSummary(userId: string, projectId?: string | null): Promise<ProjectSummary> {
   const supabase = await createClient()
 
-  const [{ data: tasks }, { data: project }] = await Promise.all([
-    supabase.from('tasks').select('status, due_date').eq('user_id', userId),
-    supabase.from('projects').select('delivery_date').eq('user_id', userId)
-      .order('created_at').limit(1).single(),
-  ])
+  const taskQuery = projectId
+    ? supabase.from('tasks').select('status, due_date').eq('user_id', userId).eq('project_id', projectId)
+    : supabase.from('tasks').select('status, due_date').eq('user_id', userId)
+
+  const projectQuery = projectId
+    ? supabase.from('projects').select('delivery_date').eq('id', projectId).single()
+    : supabase.from('projects').select('delivery_date').eq('user_id', userId).order('created_at').limit(1).single()
+
+  const [{ data: tasks }, { data: project }] = await Promise.all([taskQuery, projectQuery])
 
   const allTasks = tasks ?? []
   const now = new Date()

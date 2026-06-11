@@ -25,7 +25,7 @@ export interface AnalyticsState {
 const FALLBACK_START = new Date().toISOString().slice(0, 10)
 const FALLBACK_END   = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
 
-export function useAnalytics(): AnalyticsState {
+export function useAnalytics(projectId?: string | null): AnalyticsState {
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState<string | null>(null)
   const [tasks, setTasks]       = useState<TaskRow[]>([])
@@ -36,17 +36,17 @@ export function useAnalytics(): AnalyticsState {
     const supabase = createClient()
 
     // Fetch project first, then scope tasks to that project_id.
-    // Previously tasks had no filter → mixed tasks from multiple projects.
+    // When projectId is provided (active project from context) use it directly;
+    // otherwise fall back to the oldest project by created_at.
     const load = async () => {
       setLoading(true)
       setError(null)
 
-      const { data: projectData, error: projErr } = await supabase
-        .from('projects')
-        .select('id, name, start_date, delivery_date')
-        .order('created_at')
-        .limit(1)
-        .single()
+      const projectQuery = projectId
+        ? supabase.from('projects').select('id, name, start_date, delivery_date').eq('id', projectId).single()
+        : supabase.from('projects').select('id, name, start_date, delivery_date').order('created_at').limit(1).single()
+
+      const { data: projectData, error: projErr } = await projectQuery
 
       if (projErr && projErr.code !== 'PGRST116') throw projErr
 
@@ -95,7 +95,8 @@ export function useAnalytics(): AnalyticsState {
     // Re-fetch when the agent or CSV import triggers a board update
     window.addEventListener('taskflow:board_update', run)
     return () => window.removeEventListener('taskflow:board_update', run)
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId])
 
   if (loading || error) {
     return { loading, error, tasks, project, metrics: null, startDate: null, endDate: null }

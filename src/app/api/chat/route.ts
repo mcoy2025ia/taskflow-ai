@@ -27,10 +27,11 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const { message, history = [], voiceMode = false }: {
+  const { message, history = [], voiceMode = false, projectId = null }: {
     message: string
     history: Array<{ role: 'user' | 'assistant'; content: string }>
     voiceMode?: boolean
+    projectId?: string | null
   } = await request.json()
 
   if (!message?.trim()) {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
   // RAG: obtener tareas relevantes y resumen del proyecto en paralelo
   const [relevantTasks, projectSummary] = await Promise.all([
     searchTasksByQuery(message, { threshold: 0.3, limit: 5, userId: user.id }),
-    getProjectSummary(user.id),
+    getProjectSummary(user.id, projectId),
   ])
 
   const contextBlock  = buildContextBlock(relevantTasks)
