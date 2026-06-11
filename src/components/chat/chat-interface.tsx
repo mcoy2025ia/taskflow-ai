@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Send, Bot, User, Mic, MicOff, VolumeX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,13 +18,15 @@ export interface ChatInterfaceProps {
 
 export function ChatInterface({ initialSessionId = null }: ChatInterfaceProps) {
   const [input, setInput] = useState('')
+  const searchParams = useSearchParams()
   const projectCtx = useActiveProjectSafe()
+  const activeProjectId = searchParams.get('project_id') ?? projectCtx?.activeProject?.id
   const { isSpeaking, speakText, stopSpeaking } = useChatTTS()
   const {
     messages, isStreaming, highlightedSource,
     sendMessage, handleConfirm, handleCancel, handleCiteClick,
     bottomRef, scrollContainerRef, handleScroll,
-  } = useChatStream({ initialSessionId, activeProjectId: projectCtx?.activeProject?.id, onVoiceResponse: speakText })
+  } = useChatStream({ initialSessionId, activeProjectId, onVoiceResponse: speakText })
   const { isListening, voiceMode, setVoiceMode, startVoiceInput } = useVoiceInput({
     onTranscript: setInput,
     onSubmit: (text) => { setInput(''); sendMessage(text, true) },

@@ -235,7 +235,14 @@ export async function getProjectSummary(userId: string, projectId?: string | nul
 
   const [{ data: tasks }, { data: project }] = await Promise.all([taskQuery, projectQuery])
 
-  const allTasks = tasks ?? []
+  // If a projectId was given but returns no tasks (stale/deleted project),
+  // fall back to all user tasks so the agent always has context
+  let allTasks = tasks ?? []
+  if (projectId && allTasks.length === 0) {
+    const { data: fallback } = await supabase
+      .from('tasks').select('status, due_date').eq('user_id', userId)
+    allTasks = fallback ?? []
+  }
   const now = new Date()
 
   // Usar delivery_date de la DB; fallback a hardcoded para compatibilidad pre-migración
