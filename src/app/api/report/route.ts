@@ -1,20 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { ratelimit } from '@/lib/ratelimit'
 import { isBot, botBlockResponse } from '@/lib/bot-guard'
 
 export const runtime = 'nodejs'
 
-interface ReportSummary {
-  total: number
-  done: number
-  in_progress: number
-  todo: number
-  overdue: number
-  daysLeft: number
-  deliveryDate: string
-  projectId?: string
-}
+const ReportSummarySchema = z.object({
+  total:       z.number().int().min(0).max(100_000),
+  done:        z.number().int().min(0).max(100_000),
+  in_progress: z.number().int().min(0).max(100_000),
+  todo:        z.number().int().min(0).max(100_000),
+  overdue:     z.number().int().min(0).max(100_000),
+  daysLeft:    z.number().int().min(0).max(3650),
+  deliveryDate: z.string().max(100),
+  projectId:   z.string().uuid().optional(),
+})
+
+type ReportSummary = z.infer<typeof ReportSummarySchema>
 
 interface PhaseRow {
   name: string
@@ -56,7 +59,12 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { summary }: { summary: ReportSummary } = await request.json()
+  const body = await request.json().catch(() => null)
+  const parsed = ReportSummarySchema.safeParse(body?.summary)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
+  }
+  const summary: ReportSummary = parsed.data
 
   const pct = summary.total > 0 ? Math.round(summary.done / summary.total * 100) : 0
   const pending = summary.in_progress + summary.todo

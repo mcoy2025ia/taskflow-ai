@@ -667,6 +667,13 @@ pre {
 
 .trap-content { flex: 1; }
 
+.trap.critical {
+  background: rgba(220,38,38,0.04);
+  border-color: rgba(220,38,38,0.2);
+  border-left-color: #dc2626;
+}
+.trap.critical .trap-who { color: #fca5a5; }
+
 .trap-who {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -1722,7 +1729,8 @@ footer {
   <a class="nav-item" onclick="togglePhase('f13')"><span class="nav-num">13</span><span class="nav-text">Testing</span></a>
   <a class="nav-item" onclick="togglePhase('f14')"><span class="nav-num">14</span><span class="nav-text">CI/CD</span></a>
   <a class="nav-item" onclick="togglePhase('f15')"><span class="nav-num">15</span><span class="nav-text">Onboarding</span></a>
-  <a class="nav-item" onclick="togglePhase('f16')"><span class="nav-num">✓</span><span class="nav-text">Pre-Deploy</span></a>
+  <a class="nav-item" onclick="togglePhase('f16')"><span class="nav-num">16</span><span class="nav-text">Auditoría Post-Build</span></a>
+  <a class="nav-item" onclick="togglePhase('f17')"><span class="nav-num">✓</span><span class="nav-text">Pre-Deploy</span></a>
 </nav>
 
 <!-- ═══════════════════════════════════════════════════════ MAIN ═══ -->
@@ -1745,13 +1753,13 @@ footer {
         </div>
 
         <h1>TaskFlow <span class="version">v3</span><br><span class="accent">Guía de Construcción</span></h1>
-        <p class="header-sub">Debate entre tres expertos — Diego Vargas, Valentina Torres y Sebastián Mora — sintetizado en pasos ejecutables. Seguridad, IA y arquitectura SaaS en 16 fases.</p>
+        <p class="header-sub">Debate entre tres expertos — Diego Vargas, Valentina Torres y Sebastián Mora — sintetizado en pasos ejecutables. Seguridad, IA y arquitectura SaaS en 17 fases. Tab <strong>Reutilizar</strong> → guía de setup completa.</p>
       </div>
 
       <div class="header-meta">
         <div class="meta-item">Stack <span>Next.js 16 · Supabase · Groq · Voyage AI</span></div>
         <div class="meta-item">Seguridad <span>RLS + HMAC + Rate Limit</span></div>
-        <div class="meta-item">IA <span>RAG Híbrido + Agente Tool-Calling</span></div>
+        <div class="meta-item">IA <span>RAG Híbrido + Agente Tool-Calling · Audit 2026-06-10</span></div>
         <div class="meta-item">Tests <span>Vitest · Lighthouse CI · E2E</span></div>
         <div class="meta-item">Deploy <span>Vercel · Upstash · Sentry</span></div>
       </div>
@@ -1766,6 +1774,7 @@ footer {
     <button class="tab-btn" data-tab="guide"   onclick="switchTab('guide')">Guía de Construcción</button>
     <button class="tab-btn cta-tab" data-tab="diagram" onclick="switchTab('diagram')">Cómo funciona<span class="cta-arrow">→</span></button>
     <button class="tab-btn" data-tab="features" onclick="switchTab('features')">¿Qué hace?</button>
+    <button class="tab-btn" data-tab="setup" onclick="switchTab('setup')">Reutilizar</button>
   </div>
 </div>
 
@@ -1820,6 +1829,7 @@ footer {
       <div class="toc-item fade-in" onclick="togglePhase('f13')"><span class="toc-num">F·13</span><span class="toc-text">Testing & Cobertura</span></div>
       <div class="toc-item fade-in" onclick="togglePhase('f14')"><span class="toc-num">F·14</span><span class="toc-text">CI/CD Pipeline</span></div>
       <div class="toc-item fade-in" onclick="togglePhase('f15')"><span class="toc-num">F·15</span><span class="toc-text">Onboarding Demo</span></div>
+      <div class="toc-item fade-in" onclick="togglePhase('f16')" style="border-color:rgba(220,38,38,0.25);background:rgba(220,38,38,0.04);"><span class="toc-num" style="color:#fca5a5;background:rgba(220,38,38,0.12);border-color:rgba(220,38,38,0.2);">F·16</span><span class="toc-text">Auditoría Post-Build</span></div>
     </div>
   </div>
 </section>
@@ -1904,16 +1914,19 @@ footer {
           <div class="step-heading"><span class="step-tag">1.2</span> Estructura de Migraciones</div>
           <div class="code-wrap">
             <div class="code-bar"><div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div><span class="code-filename">supabase/migrations/</span><button class="copy-btn" onclick="copyCode(this)">COPY</button></div>
-            <pre><span class="cmt">001_types_and_profiles.sql</span>    <span class="cmt">← enums y tabla profiles</span>
-<span class="cmt">002_tasks.sql</span>                  <span class="cmt">← tabla tasks con posicionamiento</span>
-<span class="cmt">003_embeddings.sql</span>             <span class="cmt">← task_embeddings con halfvec(512)</span>
-<span class="cmt">004_rls_policies.sql</span>           <span class="cmt">← TODAS las políticas RLS + SECURITY DEFINER</span>
-<span class="cmt">005_projects.sql</span>               <span class="cmt">← multi-tenancy: projects + project_members</span>
-<span class="cmt">006_invitations.sql</span>            <span class="cmt">← tokens de invitación con expiración</span>
-<span class="cmt">007_chat_sessions.sql</span>          <span class="cmt">← sesiones de chat persistentes</span>
-<span class="cmt">008_comments.sql</span>               <span class="cmt">← comentarios en tareas</span>
-<span class="cmt">009_indexes.sql</span>                <span class="cmt">← índices de rendimiento</span>
-<span class="cmt">010_realtime.sql</span>               <span class="cmt">← publicación de canales Realtime</span></pre>
+            <pre><span class="cmt">001_profiles.sql</span>               <span class="cmt">← enums, tabla profiles y función handle_new_user</span>
+<span class="cmt">002_tasks.sql</span>                  <span class="cmt">← tabla tasks con posicionamiento numérico (step ×1000)</span>
+<span class="cmt">003_embeddings.sql</span>             <span class="cmt">← task_embeddings halfvec(512) + HNSW + RLS</span>
+<span class="cmt">004_rls_policies.sql</span>           <span class="cmt">← funciones SECURITY DEFINER + search_tasks_by_embedding v1</span>
+<span class="cmt">005_projects.sql</span>               <span class="cmt">← projects, project_phases, delivery_date</span>
+<span class="cmt">006_chat_sessions.sql</span>          <span class="cmt">← chat_sessions, chat_messages</span>
+<span class="cmt">007_collaboration.sql</span>          <span class="cmt">← project_members, comments, activity_log</span>
+                                 <span class="cmt">  + search_tasks_by_embedding v2 (proyectos compartidos)</span>
+<span class="cmt">008_invitations.sql</span>            <span class="cmt">← pending_invitations, get_invitation_by_token, accept_invitation</span>
+<span class="cmt">009_profiles_collab.sql</span>        <span class="cmt">← get_project_member_profiles (SECURITY DEFINER)</span>
+<span class="cmt">010_realtime.sql</span>               <span class="cmt">← publication Realtime en tasks y task_assignments</span>
+<span class="cmt">011_fix_search_signature.sql</span>   <span class="cmt">← realinea firma de search_tasks_by_embedding con rag.ts</span>
+<span class="cmt">012_fix_tasks_rls_update.sql</span>   <span class="cmt">← WITH CHECK correcto + trigger user_id inmutable</span></pre>
           </div>
         </div>
 
@@ -1999,11 +2012,21 @@ $$;
   EMBED_INTERNAL_SECRET:         z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">32</span>),  <span class="cmt">// mínimo 32 chars</span>
   NEXT_PUBLIC_APP_URL:           z.<span class="fn">string</span>().<span class="fn">url</span>(),
   CHAT_PROVIDER:                 z.<span class="fn">enum</span>([<span class="str">'groq'</span>, <span class="str">'ollama'</span>]).<span class="fn">default</span>(<span class="str">'groq'</span>),
-  UPSTASH_REDIS_REST_URL:        z.<span class="fn">string</span>().<span class="fn">url</span>(),
-  UPSTASH_REDIS_REST_TOKEN:      z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">1</span>),
+  <span class="cmt">// Opcionales — sin Upstash el rate limit está desactivado en dev local</span>
+  UPSTASH_REDIS_REST_URL:        z.<span class="fn">string</span>().<span class="fn">url</span>().<span class="fn">optional</span>(),
+  UPSTASH_REDIS_REST_TOKEN:      z.<span class="fn">string</span>().<span class="fn">optional</span>(),
 })
 
-<span class="kw">export const</span> <span class="var">env</span> = envSchema.<span class="fn">parse</span>(process.<span class="var">env</span>)</pre>
+<span class="cmt">// safeParse para mensaje de error descriptivo; nunca .parse() que lanza excepción cruda</span>
+<span class="kw">function</span> <span class="fn">validateEnv</span>() {
+  <span class="kw">const</span> <span class="var">result</span> = envSchema.<span class="fn">safeParse</span>(process.<span class="var">env</span>)
+  <span class="kw">if</span> (!result.success) {
+    <span class="kw">const</span> <span class="var">missing</span> = result.error.issues.<span class="fn">map</span>(i =&gt; <span class="str">`  - <span class="var">${i.path.join('.')}</span>: <span class="var">${i.message}</span>`</span>)
+    <span class="kw">throw new</span> <span class="typ">Error</span>(<span class="str">`Variables de entorno inválidas:\n<span class="var">${missing.join('\n')}</span>`</span>)
+  }
+  <span class="kw">return</span> result.data
+}
+<span class="kw">export const</span> <span class="var">env</span> = <span class="fn">validateEnv</span>()</pre>
           </div>
           <div class="trap">
             <div class="trap-icon">🔑</div>
@@ -2080,8 +2103,8 @@ $$;
           <pre><span class="kw">import</span> { z } <span class="kw">from</span> <span class="str">'zod'</span>
 
 <span class="kw">export const</span> <span class="var">CreateTaskSchema</span> = z.<span class="fn">object</span>({
-  title:       z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">1</span>, <span class="str">'El título es requerido'</span>).<span class="fn">max</span>(<span class="num">500</span>),
-  description: z.<span class="fn">string</span>().<span class="fn">max</span>(<span class="num">5000</span>).<span class="fn">optional</span>(),
+  title:       z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">1</span>, <span class="str">'El título es requerido'</span>).<span class="fn">max</span>(<span class="num">200</span>),
+  description: z.<span class="fn">string</span>().<span class="fn">max</span>(<span class="num">2000</span>).<span class="fn">optional</span>(),
   status:      z.<span class="fn">enum</span>([<span class="str">'todo'</span>, <span class="str">'in_progress'</span>, <span class="str">'done'</span>]).<span class="fn">default</span>(<span class="str">'todo'</span>),
   priority:    z.<span class="fn">enum</span>([<span class="str">'low'</span>, <span class="str">'medium'</span>, <span class="str">'high'</span>]).<span class="fn">default</span>(<span class="str">'medium'</span>),
   due_date:    z.<span class="fn">string</span>().<span class="fn">optional</span>(),
@@ -2580,9 +2603,100 @@ Sentry.<span class="fn">captureException</span>(error, {
       </div>
     </div>
 
-    <!-- CHECKLIST -->
-    <div class="phase-section" id="f16">
+    <!-- F16: AUDITORÍA POST-BUILD -->
+    <div class="phase-section" id="f16" style="border-color:rgba(220,38,38,0.2);">
       <div class="phase-header" onclick="togglePhase('f16')">
+        <span class="phase-num" style="background:rgba(220,38,38,0.15);color:#fca5a5;border:1px solid rgba(220,38,38,0.3);">FASE 16</span>
+        <div><div class="phase-title">Auditoría Post-Build — Pitfalls de Producción</div><div class="phase-subtitle">Hallazgos de auditoría IA · Bugs silenciosos · FinOps · Robustez</div></div>
+        <div class="phase-toggle"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="phase-body">
+        <div class="pt-md"></div>
+
+        <!-- Scores -->
+        <div class="decision-box" style="border-left-color:#dc2626;">
+          <div class="decision-label" style="color:#fca5a5;">▸ Scores de Madurez — Auditoría Fable 5 · 2026-06-10</div>
+          <table class="data-table" style="margin-top:12px;">
+            <thead><tr><th>Dimensión</th><th>Score</th><th>Justificación</th></tr></thead>
+            <tbody>
+              <tr><td>Scalability</td><td><span style="color:#fbbf24;font-family:var(--font-mono);">7 / 10</span></td><td>HNSW + halfvec correctos; posiciones ×1000; fire-and-forget en import masivo necesitaba <code>after()</code></td></tr>
+              <tr><td>Security</td><td><span style="color:#f87171;font-family:var(--font-mono);">6.5 / 10</span></td><td>RLS sólido + HMAC ejemplar; confirm endpoint sin allowlist (corregido); WITH CHECK tautológico (corregido); prompt injection en report/audit (corregido)</td></tr>
+              <tr><td>Cost Efficiency</td><td><span style="color:#fbbf24;font-family:var(--font-mono);">6 / 10</span></td><td>Modelo 70B para confirmaciones de 1 oración (corregido); query embedding sin caché; <code>getProjectSummary</code> en cada mensaje</td></tr>
+              <tr><td>AI Robustness</td><td><span style="color:#fbbf24;font-family:var(--font-mono);">6 / 10</span></td><td>Fallback Haiku solo cubre turno 2; turno 1 no hace streaming; degradación RAG silenciosa (corregida con Sentry)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Bugs críticos -->
+        <div class="step-block">
+          <div class="step-heading"><span class="step-tag" style="color:#fca5a5;background:rgba(220,38,38,0.1);border-color:rgba(220,38,38,0.2);">BUGS CRÍTICOS</span> Priorizados por impacto en producción</div>
+
+          <div class="trap" style="background:rgba(220,38,38,0.04);border:1px solid rgba(220,38,38,0.2);border-left:3px solid #dc2626;">
+            <div class="trap-icon">🔴</div>
+            <div class="trap-content">
+              <div class="trap-who" style="color:#fca5a5;">BLOCKER #1 — Drift de migración: RAG roto en cualquier entorno nuevo · <strong>CORREGIDO</strong> (011_fix_search_signature.sql)</div>
+              <div class="trap-text"><code>rag.ts</code> invocaba <code>search_tasks_by_embedding</code> con parámetros <code>similarity_threshold</code> + <code>p_user_id</code>. La función SQL en <code>007_collaboration.sql</code> tenía firma diferente (<code>match_threshold</code>, sin <code>p_user_id</code>). PostgREST resuelve por nombre — lanzaba PGRST202 capturado silenciosamente → contexto RAG vacío, sin alerta. Corrección: <code>011_fix_search_signature.sql</code> + <code>Sentry.captureException</code> en el catch.</div>
+            </div>
+          </div>
+
+          <div class="trap" style="background:rgba(220,38,38,0.04);border:1px solid rgba(220,38,38,0.2);border-left:3px solid #dc2626;">
+            <div class="trap-icon">🔴</div>
+            <div class="trap-content">
+              <div class="trap-who" style="color:#fca5a5;">BLOCKER #2 — Cron siempre retorna [] vacío · <strong>CORREGIDO</strong> (cron/insights/route.ts)</div>
+              <div class="trap-text">El cron usaba <code>createClient()</code> con cookies — sin sesión de usuario pasa por RLS como <code>anon</code> → todas las queries silenciosamente vacías. Los jobs del sistema <strong>siempre deben usar service_role</strong>. Corrección: reemplazar por <code>createClient(URL, SERVICE_ROLE_KEY)</code>.</div>
+            </div>
+          </div>
+
+          <div class="trap" style="background:rgba(220,38,38,0.04);border:1px solid rgba(220,38,38,0.2);border-left:3px solid #dc2626;">
+            <div class="trap-icon">🔴</div>
+            <div class="trap-content">
+              <div class="trap-who" style="color:#fca5a5;">BLOCKER #3 — RLS WITH CHECK tautológico en tasks UPDATE · <strong>CORREGIDO</strong> (012_fix_tasks_rls_update.sql)</div>
+              <div class="trap-text"><code>with check (auth.uid() = user_id or user_id is not null)</code> — como <code>user_id</code> es NOT NULL, la condición es siempre verdadera. Un editor podía reasignar la propiedad de cualquier tarea. Corrección: WITH CHECK correcto + trigger <code>tasks_prevent_user_id_change()</code> que hace <code>user_id</code> inmutable.</div>
+            </div>
+          </div>
+
+          <div class="trap" style="background:rgba(220,38,38,0.04);border:1px solid rgba(220,38,38,0.2);border-left:3px solid #dc2626;">
+            <div class="trap-icon">🔴</div>
+            <div class="trap-content">
+              <div class="trap-who" style="color:#fca5a5;">BLOCKER #4 — Confirm endpoint sin allowlist ni validación · <strong>CORREGIDO</strong> (api/chat/confirm)</div>
+              <div class="trap-text">El endpoint aceptaba <code>{ tool, args }</code> arbitrarios sin Zod — cualquier tool, args sin validar. La llamada a Groq 70B para generar 1 oración de confirmación también fue eliminada. Corrección: <code>z.literal('delete_task')</code> + <code>ArgsSchema</code> específico por tool + template string para el mensaje.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FinOps -->
+        <div class="step-block">
+          <div class="step-heading"><span class="step-tag">FINOPS</span> Optimizaciones de Costo y Latencia</div>
+          <table class="data-table">
+            <thead><tr><th>Acción</th><th>Archivo</th><th>Impacto estimado</th></tr></thead>
+            <tbody>
+              <tr><td>Template string en confirm (sin LLM)</td><td><code style="font-family:var(--font-mono);font-size:11px;">api/chat/confirm</code></td><td>−100% costo · −500ms latencia · <strong style="color:#34d399;">APLICADO</strong></td></tr>
+              <tr><td>Caché Redis de query embedding (TTL 1h)</td><td><code style="font-family:var(--font-mono);font-size:11px;">rag.ts / voyage.ts</code></td><td>−30–50% llamadas Voyage en queries repetitivas</td></tr>
+              <tr><td>Caché de <code style="font-family:var(--font-mono);font-size:11px;">getProjectSummary</code> en Upstash (TTL 60s)</td><td><code style="font-family:var(--font-mono);font-size:11px;">rag.ts</code></td><td>−2 queries DB por mensaje de chat</td></tr>
+              <tr><td>Streaming en turno 1 del agente</td><td><code style="font-family:var(--font-mono);font-size:11px;">agent.ts</code></td><td>P95 primer token: ~4s → &lt;500ms percibido</td></tr>
+              <tr><td>Truncar history server-side (~4K tokens)</td><td><code style="font-family:var(--font-mono);font-size:11px;">api/chat/route.ts</code></td><td>Acota costo creciente por conversación</td></tr>
+              <tr><td><code style="font-family:var(--font-mono);font-size:11px;">after()</code> para embeddings del CSV import</td><td><code style="font-family:var(--font-mono);font-size:11px;">import.actions.ts</code></td><td>Elimina pérdida silenciosa de hasta 500 embeddings · <strong style="color:#34d399;">APLICADO</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Deuda técnica menor -->
+        <div class="decision-box">
+          <div class="decision-label">▸ Deuda Técnica Menor (sin bloquear producción)</div>
+          <div class="decision-text">
+            <strong style="color:var(--blue-glow);">Prompt injection en /api/report y /api/audit</strong> — payload del cliente sin Zod se interpolaba directo al prompt. <strong style="color:#34d399;">Corregido</strong> con <code>ReportSummarySchema</code> y <code>AuditBodySchema</code>.<br><br>
+            <strong style="color:var(--blue-glow);">search_comments</strong> — sin scoping explícito por <code>user_id</code> + wildcards <code>%_\</code> sin escapar en ilike. <strong style="color:#34d399;">Corregido</strong>.<br><br>
+            <strong style="color:var(--blue-glow);">Middleware zombie</strong> — <code>api/backfill</code> excluido del matcher pero la ruta no existe. <strong style="color:#34d399;">Corregido</strong>.<br><br>
+            <strong style="color:var(--blue-glow);">Fallback asimétrico del agente</strong> — Haiku solo cubre el turno 2, no el turno 1. Documentado en el panel de modelos.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CHECKLIST -->
+    <div class="phase-section" id="f17">
+      <div class="phase-header" onclick="togglePhase('f17')">
         <span class="phase-num" style="background:var(--blue-glow);color:#000;">✓ PRE-DEPLOY</span>
         <div><div class="phase-title">Checklist Pre-Deploy a Producción</div><div class="phase-subtitle">Infraestructura · Variables de Entorno · Seguridad · Test de Humo</div></div>
         <div class="phase-toggle"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
@@ -2649,7 +2763,7 @@ Sentry.<span class="fn">captureException</span>(error, {
         <tr><td>Embeddings</td><td>halfvec(512) + HNSW</td><td>50% menos espacio, funciona desde fila 1</td></tr>
         <tr><td>RAG</td><td>Híbrido: intención + vector + rerank</td><td>Máxima precisión con menor latencia</td></tr>
         <tr><td>Agent runtime</td><td>runtime = 'nodejs'</td><td>Edge no soporta streams largos ni todas las APIs</td></tr>
-        <tr><td>Destructive tools</td><td>confirm_required interceptor</td><td>Doble guardrail: técnico + UX</td></tr>
+        <tr><td>Destructive tools</td><td>confirm_required interceptor + allowlist Zod literal</td><td>Solo <code>delete_task</code> puede atravesar el confirm endpoint — allowlist explícita</td></tr>
         <tr><td>System prompt</td><td>Reglas negativas explícitas</td><td>El LLM respeta restricciones cuando son claras</td></tr>
         <tr><td>Zod forms</td><td>z.input&lt;&gt; para useForm, cast al OUTPUT</td><td>Defaults hacen que los tipos no coincidan</td></tr>
         <tr><td>Errores Zod</td><td>.issues[0]?.message</td><td>Zod v4 cambió de .errors a .issues</td></tr>
@@ -2998,7 +3112,7 @@ Sentry.<span class="fn">captureException</span>(error, {
       </div>
       <div class="feat-metrics">
         <div class="feat-metric">
-          <div class="feat-metric-num">16</div>
+          <div class="feat-metric-num">17</div>
           <div class="feat-metric-label">Fases de<br>construcción</div>
         </div>
         <div class="feat-metric">
@@ -3010,8 +3124,12 @@ Sentry.<span class="fn">captureException</span>(error, {
           <div class="feat-metric-label">Cobertura<br>de tests</div>
         </div>
         <div class="feat-metric">
-          <div class="feat-metric-num">5</div>
-          <div class="feat-metric-label">Gates<br>CI/CD</div>
+          <div class="feat-metric-num">6.5/10</div>
+          <div class="feat-metric-label">Security<br>Score</div>
+        </div>
+        <div class="feat-metric">
+          <div class="feat-metric-num">4</div>
+          <div class="feat-metric-label">Bugs críticos<br>resueltos</div>
         </div>
       </div>
     </div>
@@ -3037,7 +3155,7 @@ Sentry.<span class="fn">captureException</span>(error, {
       <div class="feat-card" style="--feat-color:#6366f1;">
         <span class="feat-icon">🤖</span>
         <div class="feat-card-title">Agente IA con herramientas</div>
-        <div class="feat-card-desc">Escribe "crea una tarea urgente para revisar el dashboard" y el agente la crea, la categoriza y la posiciona en el tablero. Las tools se ejecutan en paralelo cuando el LLM las solicita simultáneamente. Acciones destructivas como eliminar requieren confirmación explícita del usuario.</div>
+        <div class="feat-card-desc">Escribe "crea una tarea urgente para revisar el dashboard" y el agente la crea, la categoriza y la posiciona en el tablero. Las tools se ejecutan en paralelo cuando el LLM las solicita simultáneamente. Acciones destructivas requieren confirmación explícita — el endpoint de confirmación tiene allowlist estricta: solo <code>delete_task</code> puede atravesarlo.</div>
         <div class="feat-tags">
           <span class="feat-tag violet">llama-3.3-70b</span>
           <span class="feat-tag violet">Tool calling</span>
@@ -3107,7 +3225,7 @@ Sentry.<span class="fn">captureException</span>(error, {
         <div class="feat-stack-row">
           <div class="feat-stack-layer-name">Frontend</div>
           <div class="feat-stack-badges">
-            <span class="feat-stack-badge hi">Next.js 15</span>
+            <span class="feat-stack-badge hi">Next.js 16.2.4</span>
             <span class="feat-stack-badge hi">App Router</span>
             <span class="feat-stack-badge hi">TypeScript</span>
             <span class="feat-stack-badge hi">Tailwind CSS</span>
@@ -3211,6 +3329,313 @@ Sentry.<span class="fn">captureException</span>(error, {
   </div>
 </section>
 </div><!-- /tab-features -->
+
+<!-- ══════════════════════════════ TAB: REUTILIZAR ══ -->
+<div id="tab-setup" class="tab-content">
+<section class="experts-section" style="padding-top:48px;">
+  <div class="wrapper">
+    <div class="section-label">Guía de Reutilización</div>
+    <p style="color:var(--slate-400);font-size:14px;max-width:640px;margin:8px 0 40px;">
+      Todo lo que necesitas para clonar este proyecto, conectar tus propias credenciales y tenerlo corriendo en menos de 30 minutos. Sin suposiciones — cada paso es ejecutable.
+    </p>
+
+    <!-- PASO 1: PREREQUISITOS -->
+    <div class="phase-section open" id="setup-prereq" style="margin-bottom:16px;">
+      <div class="phase-header" onclick="togglePhase('setup-prereq')">
+        <span class="phase-num">PASO 1</span>
+        <div><div class="phase-title">Prerrequisitos</div><div class="phase-subtitle">Lo que debes tener instalado antes de empezar</div></div>
+        <div class="phase-toggle"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="phase-body">
+        <div class="pt-md"></div>
+        <table class="data-table">
+          <thead><tr><th>Herramienta</th><th>Versión mínima</th><th>Verificar</th></tr></thead>
+          <tbody>
+            <tr><td>Node.js</td><td>20 LTS</td><td><code>node -v</code></td></tr>
+            <tr><td>npm</td><td>10+</td><td><code>npm -v</code></td></tr>
+            <tr><td>Git</td><td>cualquiera</td><td><code>git --version</code></td></tr>
+            <tr><td>Supabase CLI</td><td>2.x</td><td><code>npx supabase --version</code></td></tr>
+          </tbody>
+        </table>
+        <div class="decision-box" style="margin-top:16px;">
+          <div class="decision-label">▸ Cuentas externas necesarias (todas tienen plan gratuito)</div>
+          <div class="decision-text">
+            <strong style="color:var(--blue-glow);">Supabase</strong> — base de datos + auth + realtime → supabase.com<br>
+            <strong style="color:var(--blue-glow);">Groq</strong> — LLM llama-3.3-70b (gratis con rate limit) → console.groq.com<br>
+            <strong style="color:var(--blue-glow);">Voyage AI</strong> — embeddings + reranking → voyageai.com<br>
+            <strong style="color:var(--blue-glow);">Upstash</strong> — Redis serverless para rate limiting → upstash.com<br>
+            <strong style="color:var(--blue-glow);">Vercel</strong> (solo para deploy) — vercel.com
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 2: CLONAR E INSTALAR -->
+    <div class="phase-section open" id="setup-clone" style="margin-bottom:16px;">
+      <div class="phase-header" onclick="togglePhase('setup-clone')">
+        <span class="phase-num">PASO 2</span>
+        <div><div class="phase-title">Clonar e instalar dependencias</div><div class="phase-subtitle">2 comandos</div></div>
+        <div class="phase-toggle"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="phase-body">
+        <div class="pt-md"></div>
+        <div class="code-wrap">
+          <div class="code-bar"><div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div><span class="code-filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">COPY</button></div>
+          <pre><span class="cmt"># 1. Clonar</span>
+git clone https://github.com/tu-usuario/taskflow-v3.git
+cd taskflow-v3
+
+<span class="cmt"># 2. Instalar dependencias</span>
+npm install</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 3: SUPABASE -->
+    <div class="phase-section open" id="setup-supabase" style="margin-bottom:16px;">
+      <div class="phase-header" onclick="togglePhase('setup-supabase')">
+        <span class="phase-num">PASO 3</span>
+        <div><div class="phase-title">Crear proyecto Supabase y aplicar migraciones</div><div class="phase-subtitle">Base de datos · Auth · RLS · pgvector</div></div>
+        <div class="phase-toggle"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="phase-body">
+        <div class="pt-md"></div>
+        <div class="step-heading"><span class="step-tag">3.1</span> Crear el proyecto en Supabase Dashboard</div>
+        <div class="decision-box">
+          <div class="decision-text">
+            Ve a <strong style="color:var(--blue-glow);">supabase.com → New Project</strong>.<br>
+            Anota estos 3 valores que usarás en el paso 4:<br>
+            <code>Project URL</code> → Settings → API → Project URL<br>
+            <code>anon key</code> → Settings → API → Project API keys → anon public<br>
+            <code>service_role key</code> → Settings → API → Project API keys → service_role <strong>(secreto, nunca al cliente)</strong>
+          </div>
+        </div>
+
+        <div class="step-heading" style="margin-top:20px;"><span class="step-tag">3.2</span> Habilitar la extensión pgvector</div>
+        <div class="code-wrap">
+          <div class="code-bar"><div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div><span class="code-filename">Supabase Dashboard → SQL Editor</span><button class="copy-btn" onclick="copyCode(this)">COPY</button></div>
+          <pre>create extension if not exists vector;</pre>
+        </div>
+
+        <div class="step-heading" style="margin-top:20px;"><span class="step-tag">3.3</span> Vincular y aplicar las 12 migraciones</div>
+        <div class="code-wrap">
+          <div class="code-bar"><div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div><span class="code-filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">COPY</button></div>
+          <pre><span class="cmt"># Vincular al proyecto (obtén el project-ref en Settings → General)</span>
+npx supabase link --project-ref &lt;tu-project-ref&gt;
+
+<span class="cmt"># Aplicar las 12 migraciones en orden</span>
+npx supabase db push</pre>
+        </div>
+        <div class="trap" style="margin-top:12px;">
+          <div class="trap-icon">⚠️</div>
+          <div class="trap-content">
+            <div class="trap-who">Verificar que se aplicaron las 12 migraciones</div>
+            <div class="trap-text">En Supabase Dashboard → Table Editor debes ver las tablas: <code>profiles</code>, <code>tasks</code>, <code>task_embeddings</code>, <code>projects</code>, <code>project_phases</code>, <code>project_members</code>, <code>chat_sessions</code>, <code>messages</code>, <code>comments</code>, <code>invitations</code>. Si alguna falta, revisa la salida del <code>db push</code>.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 4: ENV VARS -->
+    <div class="phase-section open" id="setup-env" style="margin-bottom:16px;">
+      <div class="phase-header" onclick="togglePhase('setup-env')">
+        <span class="phase-num">PASO 4</span>
+        <div><div class="phase-title">Variables de entorno</div><div class="phase-subtitle">Crear <code style="font-size:12px;">.env.local</code> en la raíz del proyecto</div></div>
+        <div class="phase-toggle"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="phase-body">
+        <div class="pt-md"></div>
+        <div class="code-wrap">
+          <div class="code-bar"><div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div><span class="code-filename">.env.local — copia y rellena cada valor</span><button class="copy-btn" onclick="copyCode(this)">COPY</button></div>
+          <pre><span class="cmt"># ── SUPABASE ─────────────────────────────────────────────────────</span>
+NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...          <span class="cmt"># NUNCA expongas esta clave</span>
+
+<span class="cmt"># ── IA ───────────────────────────────────────────────────────────</span>
+GROQ_API_KEY=gsk_...                      <span class="cmt"># console.groq.com → API Keys</span>
+VOYAGE_API_KEY=pa-...                     <span class="cmt"># voyageai.com → Dashboard → API Keys</span>
+ANTHROPIC_API_KEY=sk-ant-...              <span class="cmt"># opcional — fallback Haiku si Groq cae</span>
+CHAT_PROVIDER=groq                        <span class="cmt"># 'groq' | 'ollama'</span>
+
+<span class="cmt"># ── RATE LIMITING (Upstash Redis) ────────────────────────────────</span>
+UPSTASH_REDIS_REST_URL=https://....upstash.io
+UPSTASH_REDIS_REST_TOKEN=AX...
+
+<span class="cmt"># ── SEGURIDAD INTERNA ────────────────────────────────────────────</span>
+EMBED_INTERNAL_SECRET=                    <span class="cmt"># genera con: openssl rand -hex 32</span>
+
+<span class="cmt"># ── APP ──────────────────────────────────────────────────────────</span>
+NEXT_PUBLIC_APP_URL=http://localhost:3000 <span class="cmt"># sin barra final</span>
+
+<span class="cmt"># ── OPCIONALES ───────────────────────────────────────────────────</span>
+RESEND_API_KEY=re_...                     <span class="cmt"># emails de invitación (sin esto loguea URL)</span>
+CRON_SECRET=                              <span class="cmt"># genera con: openssl rand -hex 32</span>
+NEXT_PUBLIC_SENTRY_DSN=                   <span class="cmt"># observabilidad en producción</span></pre>
+        </div>
+
+        <div class="step-heading" style="margin-top:20px;"><span class="step-tag">Generar EMBED_INTERNAL_SECRET</span></div>
+        <div class="code-wrap">
+          <div class="code-bar"><div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div><span class="code-filename">Terminal (Mac/Linux) o Git Bash (Windows)</span><button class="copy-btn" onclick="copyCode(this)">COPY</button></div>
+          <pre>openssl rand -hex 32</pre>
+        </div>
+        <div class="decision-box" style="margin-top:12px;">
+          <div class="decision-label">▸ Dónde obtener cada clave externa</div>
+          <div class="decision-text">
+            <strong style="color:var(--blue-glow);">Groq:</strong> console.groq.com → API Keys → Create API Key<br>
+            <strong style="color:var(--blue-glow);">Voyage AI:</strong> dash.voyageai.com → API Keys<br>
+            <strong style="color:var(--blue-glow);">Upstash:</strong> console.upstash.com → Create Database (Redis) → REST URL + Token<br>
+            <strong style="color:var(--blue-glow);">Resend:</strong> resend.com → API Keys (solo si quieres emails de invitación)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 5: LEVANTAR Y VERIFICAR -->
+    <div class="phase-section open" id="setup-run" style="margin-bottom:16px;">
+      <div class="phase-header" onclick="togglePhase('setup-run')">
+        <span class="phase-num">PASO 5</span>
+        <div><div class="phase-title">Levantar y verificar</div><div class="phase-subtitle">Dev server + smoke test de las 3 capas</div></div>
+        <div class="phase-toggle"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="phase-body">
+        <div class="pt-md"></div>
+        <div class="code-wrap">
+          <div class="code-bar"><div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div><span class="code-filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">COPY</button></div>
+          <pre>npm run dev</pre>
+        </div>
+        <div class="step-heading" style="margin-top:20px;"><span class="step-tag">Smoke test</span> Verificar que las 3 capas funcionan</div>
+        <table class="data-table" style="margin-top:12px;">
+          <thead><tr><th>Qué verificar</th><th>Cómo</th><th>Resultado esperado</th></tr></thead>
+          <tbody>
+            <tr><td>Auth + DB</td><td>Registrarse con email/password</td><td>Redirige a <code>/board</code>, modal de onboarding aparece</td></tr>
+            <tr><td>Kanban</td><td>Clic "Poblar Olist" en el board</td><td>Se crean ~14 tareas demo en las 3 columnas</td></tr>
+            <tr><td>Embeddings</td><td>Crear una tarea manualmente</td><td>En Supabase → <code>task_embeddings</code> aparece una fila nueva</td></tr>
+            <tr><td>Chat + RAG</td><td>Escribir "¿qué tengo pendiente?"</td><td>El agente responde citando las tareas reales del tablero</td></tr>
+            <tr><td>Analítica</td><td>Ir a <code>/analytics</code></td><td>Gráficos de burndown y métricas visibles</td></tr>
+          </tbody>
+        </table>
+        <div class="trap" style="margin-top:16px;">
+          <div class="trap-icon">⚠️</div>
+          <div class="trap-content">
+            <div class="trap-who">Si el chat responde sin contexto de tareas</div>
+            <div class="trap-text">La función SQL <code>search_tasks_by_embedding</code> probablemente no coincide con la firma esperada. Verifica que las 12 migraciones se aplicaron en orden — especialmente <code>011_fix_search_signature.sql</code>. Si el error persiste, ejecuta esa migración manualmente en el SQL Editor.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 6: ADAPTAR PARA TU PROYECTO -->
+    <div class="phase-section open" id="setup-adapt" style="margin-bottom:16px;">
+      <div class="phase-header" onclick="togglePhase('setup-adapt')">
+        <span class="phase-num">PASO 6</span>
+        <div><div class="phase-title">Adaptar para tu propio proyecto</div><div class="phase-subtitle">Qué cambiar para no tener datos Olist</div></div>
+        <div class="phase-toggle"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="phase-body">
+        <div class="pt-md"></div>
+        <table class="data-table">
+          <thead><tr><th>Qué cambiar</th><th>Archivo</th><th>Qué hacer</th></tr></thead>
+          <tbody>
+            <tr><td>Nombre del proyecto demo</td><td><code>src/actions/project.actions.ts</code></td><td>Cambiar <code>'Pipeline Olist'</code> por el nombre de tu proyecto en <code>seedDemoProject()</code></td></tr>
+            <tr><td>Tareas del onboarding</td><td><code>src/actions/project.actions.ts</code></td><td>Editar el array <code>OLIST_DONE</code>, <code>OLIST_IN_PROGRESS</code> y <code>OLIST_TODO</code> con tus tareas reales</td></tr>
+            <tr><td>Plantilla CSV descargable</td><td><code>public/template-tareas.csv</code></td><td>Reemplazar con tu propio CSV de ejemplo (máx. 500 filas)</td></tr>
+            <tr><td>Fechas del proyecto demo</td><td>Supabase SQL Editor</td><td><code>UPDATE projects SET start_date='...', delivery_date='...' WHERE name='...'</code></td></tr>
+            <tr><td>Fechas de tareas demo</td><td>Supabase SQL Editor</td><td>Actualizar <code>due_date</code> en las tareas para que correspondan a tu cronograma</td></tr>
+            <tr><td>Fases del proyecto</td><td><code>supabase/migrations/005_projects.sql</code></td><td>Editar el <code>cross join (values ...)</code> con tus propias fases y conteos</td></tr>
+            <tr><td>Proveedores de IA</td><td><code>.env.local</code></td><td>Cambiar <code>CHAT_PROVIDER=groq</code> a <code>ollama</code> para pruebas locales sin costo</td></tr>
+          </tbody>
+        </table>
+
+        <div class="decision-box" style="margin-top:20px;">
+          <div class="decision-label">▸ Reindexar embeddings después de cambiar tareas masivamente</div>
+          <div class="decision-text">
+            Si importas tus propias tareas por CSV o modificas títulos/descripciones en bulk, corre el script de backfill para que el RAG tenga contexto correcto:
+          </div>
+          <div class="code-wrap" style="margin-top:12px;">
+            <div class="code-bar"><div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div><span class="code-filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">COPY</button></div>
+            <pre>npx dotenv -e .env.local -- npx tsx scripts/seed-embeddings.ts</pre>
+          </div>
+          <div class="decision-text" style="margin-top:8px;">
+            El script respeta el rate limit de 21 req/s de Voyage AI. Para 500 tareas tarda ~25 segundos.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 7: DEPLOY A VERCEL -->
+    <div class="phase-section open" id="setup-deploy" style="margin-bottom:16px;">
+      <div class="phase-header" onclick="togglePhase('setup-deploy')">
+        <span class="phase-num">PASO 7</span>
+        <div><div class="phase-title">Deploy a producción en Vercel</div><div class="phase-subtitle">CI/CD automático con GitHub Actions</div></div>
+        <div class="phase-toggle"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="phase-body">
+        <div class="pt-md"></div>
+        <div class="step-heading"><span class="step-tag">7.1</span> Conectar con Vercel</div>
+        <div class="code-wrap">
+          <div class="code-bar"><div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div><span class="code-filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">COPY</button></div>
+          <pre><span class="cmt"># Instalar CLI si no lo tienes</span>
+npm i -g vercel
+
+<span class="cmt"># Vincular al proyecto (o crear uno nuevo)</span>
+vercel link
+
+<span class="cmt"># Subir variables de entorno a Vercel</span>
+vercel env pull .env.local   <span class="cmt"># si ya están en Vercel</span>
+<span class="cmt"># — o — agrégalas manualmente en vercel.com → Settings → Environment Variables</span></pre>
+        </div>
+
+        <div class="step-heading" style="margin-top:20px;"><span class="step-tag">7.2</span> Secrets requeridos en GitHub (para CI/CD)</div>
+        <div class="decision-box">
+          <div class="decision-text" style="font-family:var(--font-mono);font-size:12px;line-height:2;">
+            <code>VERCEL_TOKEN</code> · <code>VERCEL_ORG_ID</code> · <code>VERCEL_PROJECT_ID</code><br>
+            <code>NEXT_PUBLIC_SUPABASE_URL</code> · <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> · <code>SUPABASE_SERVICE_ROLE_KEY</code><br>
+            <code>GROQ_API_KEY</code> · <code>VOYAGE_API_KEY</code> · <code>EMBED_INTERNAL_SECRET</code><br>
+            <code>UPSTASH_REDIS_REST_URL</code> · <code>UPSTASH_REDIS_REST_TOKEN</code><br>
+            <code>TEST_USER_EMAIL</code> · <code>TEST_USER_PASSWORD</code> <span style="color:var(--slate-400);">(cuenta real en Supabase para E2E)</span><br>
+            <code>NEXT_PUBLIC_SENTRY_DSN</code> · <code>SENTRY_ORG</code> · <code>SENTRY_PROJECT</code> · <code>SENTRY_AUTH_TOKEN</code> <span style="color:var(--slate-400);">(opcionales)</span>
+          </div>
+        </div>
+        <div class="decision-box" style="margin-top:12px;">
+          <div class="decision-label">▸ Pipeline CI/CD que se ejecuta automáticamente</div>
+          <div class="decision-text">
+            Cada push a <code>main</code> o a ramas <code>feat/**</code> / <code>fix/**</code> / <code>chore/**</code> dispara:<br>
+            <strong style="color:var(--blue-glow);">lint → tsc → tests + cobertura 70% → build → Lighthouse CI</strong><br>
+            Si todo pasa, merge a <code>main</code> lanza deploy automático a producción.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ERRORES FRECUENTES -->
+    <div class="phase-section open" id="setup-errors" style="margin-bottom:40px;">
+      <div class="phase-header" onclick="togglePhase('setup-errors')">
+        <span class="phase-num">ERRORES</span>
+        <div><div class="phase-title">Problemas frecuentes al reutilizar</div><div class="phase-subtitle">Diagnóstico rápido sin tener que leer todo el código</div></div>
+        <div class="phase-toggle"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="phase-body">
+        <div class="pt-md"></div>
+        <table class="data-table">
+          <thead><tr><th>Síntoma</th><th>Causa</th><th>Solución</th></tr></thead>
+          <tbody>
+            <tr><td>El agente responde sin contexto ("No tengo información de tus tareas")</td><td>Migración 011 no aplicada o <code>task_embeddings</code> vacía</td><td>Correr <code>npx supabase db push</code> y luego el script de backfill de embeddings</td></tr>
+            <tr><td>El tablero no carga, error de RLS</td><td>Políticas RLS no aplicadas o <code>user_id</code> no coincide</td><td>Verificar que <code>004_rls_policies.sql</code> se aplicó. Probar con service_role en SQL Editor.</td></tr>
+            <tr><td><code>PGRST200: relationship not found</code></td><td>FK faltante, suele pasar con backups parciales</td><td><code>NOTIFY pgrst, 'reload schema'</code> en SQL Editor. Si persiste, agregar el FK manualmente.</td></tr>
+            <tr><td>Chat no hace streaming, pantalla en blanco</td><td><code>NEXT_PUBLIC_APP_URL</code> incorrecto o con barra final</td><td>Verificar que sea exactamente <code>http://localhost:3000</code> sin <code>/</code> al final</td></tr>
+            <tr><td>Embeddings no se generan al crear tareas</td><td><code>EMBED_INTERNAL_SECRET</code> distinto entre firmante y verificador</td><td>Usar el mismo valor en <code>.env.local</code> y en Vercel. HMAC tiene ventana de 5 min.</td></tr>
+            <tr><td>Rate limit 429 en el chat en dev</td><td>Upstash no configurado → Redis connection falla</td><td>Verificar <code>UPSTASH_REDIS_REST_URL</code> y <code>TOKEN</code>. En dev local se puede usar un DB de free tier.</td></tr>
+            <tr><td>Analytics muestra "0 días restantes"</td><td><code>delivery_date</code> del proyecto ya pasó</td><td><code>UPDATE projects SET delivery_date='YYYY-MM-DD' WHERE name='...'</code> en SQL Editor</td></tr>
+            <tr><td><code>cookies() should be awaited</code></td><td>Olvidaste <code>await</code> en <code>createClient()</code></td><td>Siempre <code>const supabase = await createClient()</code> en Server Components y Server Actions</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+</div><!-- /tab-setup -->
 
 </main>
 
@@ -3429,7 +3854,7 @@ function restoreModelPanel() {
     </div>
     <div class="model-row">
       <span class="model-badge">FALLBACK</span>
-      <div class="model-desc"><strong style="color:var(--blue-ice);">Claude Haiku 4.5</strong> — Activado si Groq no responde en 10s. Mismas tools, mismo system prompt. Transparente para el usuario.</div>
+      <div class="model-desc"><strong style="color:var(--blue-ice);">Claude Haiku 4.5</strong> — Activado solo en el <strong style="color:var(--blue-ice);">turno 2</strong> si Groq falla al generar la respuesta final post-tool. El turno 1 (detección de tool calls) no tiene fallback — si Groq cae allí el stream emite <code style="font-size:10px;background:rgba(99,102,241,0.12);color:#a5b4fc;padding:1px 5px;border-radius:3px;">{ type: 'error' }</code>. Cobertura asimétrica.</div>
     </div>
     <div class="model-row">
       <span class="model-badge">EMBED</span>

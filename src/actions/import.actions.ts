@@ -143,13 +143,15 @@ export async function importTasksCSV(
     return { success: false, error: `Error al insertar: ${insertError.message}` }
   }
 
-  // Disparar embeddings fire-and-forget en batches throttleados.
-  // /api/embed tiene rate limit de 100/min → 5 paralelas cada 3s ≈ 100/min sostenido.
-  // Para 500 filas, esto toma ~5 min en background y NO bloquea la response al usuario.
+  // Generar embeddings en background throttleado.
+  // /api/embed rate limit 100/min → 5 paralelas cada 3s ≈ 100/min sostenido.
+  // Para 500 filas el proceso dura ~5 min — usamos waitUntil() de Vercel para
+  // que la función no se congele tras enviar la response (evita pérdida silenciosa).
   if (inserted && inserted.length > 0) {
     const BATCH_SIZE = 5
     const BATCH_DELAY_MS = 3000
-    void (async () => {
+
+    const embedTask = async () => {
       try {
         const { signRequest } = await import('@/lib/hmac')
         const path = '/api/embed'
@@ -169,8 +171,17 @@ export async function importTasksCSV(
             await new Promise(r => setTimeout(r, BATCH_DELAY_MS))
           }
         }
-      } catch { /* silencioso — embedding es opcional */ }
-    })()
+      } catch { /* embedding es opcional — no bloquea la importación */ }
+    }
+
+    // after() garantiza que Vercel mantiene la función viva hasta que termine.
+    // En entornos sin after (tests, dev local) cae al void fallback.
+    try {
+      const { after } = await import('next/server')
+      after(embedTask())
+    } catch {
+      void embedTask()
+    }
   }
 
   Sentry.addBreadcrumb({

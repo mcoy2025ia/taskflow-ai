@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { generateQueryEmbedding, rerank, buildTaskContent } from './voyage'
 import type { TaskStatus, TaskPriority } from '@/types/app.types'
+import * as Sentry from '@sentry/nextjs'
 
 export interface TaskSearchResult {
   task_id: string
@@ -91,6 +92,7 @@ async function searchTasksBySemantic(
 
   if (error) {
     console.error('[rag] Error en búsqueda vectorial:', error)
+    Sentry.captureException(error, { tags: { component: 'rag.semantic' } })
     return []
   }
 
@@ -169,6 +171,7 @@ export async function searchTasksByQuery(
     }))
   } catch (err) {
     console.error('[rag] Rerank falló, usando top candidatos sin rerank:', err)
+    Sentry.captureException(err, { tags: { component: 'rag.rerank' } })
     return candidates.slice(0, RERANK_FINAL)
   }
 }

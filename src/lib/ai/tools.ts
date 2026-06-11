@@ -241,13 +241,25 @@ export async function executeTool(
     }
 
     case 'search_comments': {
-      const query = (args.query as string).trim()
+      const rawQuery = (args.query as string).trim()
+      // Escapar los caracteres especiales de LIKE para evitar patrones inesperados
+      const safeQuery = rawQuery.replace(/[%_\\]/g, '\\$&')
       const taskId = args.task_id as string | undefined
+
+      // Filtrar primero por las tareas del usuario para no depender solo de RLS
+      const { data: userTaskIds } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('user_id', userId)
+
+      const ids = (userTaskIds ?? []).map(t => t.id)
+      if (ids.length === 0) return 'No se encontraron comentarios con esa búsqueda.'
 
       let dbQuery = supabase
         .from('comments')
         .select('id, task_id, content, created_at')
-        .ilike('content', `%${query}%`)
+        .in('task_id', ids)
+        .ilike('content', `%${safeQuery}%`)
         .order('created_at', { ascending: false })
         .limit(10)
 

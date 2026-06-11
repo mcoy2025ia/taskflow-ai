@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
   // the "module-not-found" error when any route imports ratelimit.ts → @upstash/redis.
   serverExternalPackages: ['@upstash/redis', '@upstash/ratelimit'],
 
+  // Allow HMR from VirtualBox host-only network in local dev
+  allowedDevOrigins: ['192.168.56.1'],
+
   experimental: {
     optimizePackageImports: [
       'lucide-react',
@@ -85,9 +88,15 @@ export default withSentryConfig(nextConfig, {
     deleteSourcemapsAfterUpload: true,
   },
 
-  // Suppress Sentry SDK logger in production bundles
-  disableLogger: true,
+  // Suppress Sentry SDK logger in production bundles (new API, replaces disableLogger)
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 
-  // Don't auto-create Vercel Cron monitors
-  automaticVercelMonitors: false,
+  // Don't auto-create Vercel Cron monitors (new API, replaces automaticVercelMonitors)
+  // automaticVercelMonitors was moved inside the `webpack` namespace but the
+  // recommended replacement is simply omitting it (defaults to false since v9).
+
 })

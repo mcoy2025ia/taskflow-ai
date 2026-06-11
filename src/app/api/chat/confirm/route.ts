@@ -1,10 +1,25 @@
 export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { getAuthUser } from '@/lib/supabase/get-user'
 import { executeTool } from '@/lib/ai/tools'
 import { ratelimit } from '@/lib/ratelimit'
+import { DESTRUCTIVE_TOOLS } from '@/lib/ai/agent'
+
+// Allowlist de tools que pueden ejecutarse via confirmación.
+// Refleja DESTRUCTIVE_TOOLS de agent.ts — si se agrega una nueva tool destructiva
+// hay que agregar su literal aquí y su ArgsSchema más abajo.
+const ConfirmSchema = z.object({
+  tool: z.literal('delete_task'),
+  args: z.record(z.string(), z.unknown()),
+})
+
+// Validación de args específica por tool destructiva
+const ArgsSchemas: Record<string, z.ZodTypeAny> = {
+  delete_task: z.object({ task_id: z.string().uuid() }),
+}
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -14,52 +29,28 @@ export async function POST(request: NextRequest) {
   const rl = await ratelimit.chat(user.id)
   if (rl.limited) return NextResponse.json({ error: 'Too Many Requests' }, { status: 429 })
 
-  const { tool, args } = await request.json() as { tool: string; args: Record<string, unknown> }
+  const body = await request.json().catch(() => null)
+  const parsed = ConfirmSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
+  }
+
+  const { tool, args } = parsed.data
+
+  // Validar args con el schema específico de la tool
+  const argsSchema = ArgsSchemas[tool]
+  if (argsSchema) {
+    const argsParsed = argsSchema.safeParse(args)
+    if (!argsParsed.success) {
+      return NextResponse.json({ error: 'Argumentos inválidos' }, { status: 400 })
+    }
+  }
 
   const result = await executeTool(tool, args, { supabase, userId: user.id })
 
-  // Brief confirmation via Groq (non-streaming — response is always short)
-  let message = result
-  try {
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [
-          {
-            role: 'system',
-            content: 'Eres TaskFlow AI. Confirma en UNA sola oración que la acción solicitada se ejecutó. Sin markdown.',
-          },
-          {
-            role: 'assistant',
-            content: '',
-            tool_calls: [{
-              id: 'confirmed',
-              type: 'function',
-              function: { name: tool, arguments: JSON.stringify(args) },
-            }],
-          },
-          {
-            role: 'tool',
-            tool_call_id: 'confirmed',
-            content: result,
-          },
-        ],
-        stream: false,
-        temperature: 0.2,
-        max_tokens: 80,
-      }),
-    })
-
-    if (groqRes.ok) {
-      const data = await groqRes.json()
-      message = data.choices?.[0]?.message?.content ?? result
-    }
-  } catch { /* usa el resultado bruto si Groq falla */ }
+  // Template determinista — sin llamada LLM para una confirmación de una oración.
+  // La versión anterior usaba llama-3.3-70b-versatile con max_tokens:80 para esto.
+  const message = result
 
   return NextResponse.json({ message })
 }

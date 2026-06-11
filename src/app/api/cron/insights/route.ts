@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
+
+// El cron no tiene sesión de usuario: createClient() del servidor pasa por RLS
+// como anon y retorna [] en todas las queries. service_role bypasea RLS — correcto
+// para jobs del sistema que necesitan leer datos de todos los usuarios.
+function createServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // Protected by Vercel Cron — Authorization header set in vercel.json
 export async function GET(request: NextRequest) {
@@ -10,7 +20,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)

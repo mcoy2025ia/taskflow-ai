@@ -52,7 +52,9 @@
       "PowerShell(cd \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\"; $env:PYTHONIOENCODING=\"utf-8\"; python scripts/fix_streamlit_desc.py)",
       "PowerShell(cd \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\"; $env:PYTHONIOENCODING=\"utf-8\"; python scripts/fix_project_dates.py)",
       "PowerShell(cd \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\"; git ls-files --others --exclude-standard | Where-Object { $_ -notmatch '\\\\.backup$|supabase/\\\\.temp' } | Sort-Object)",
-      "PowerShell(cd \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\"; \\(Get-Item \"db_cluster-17-04-2025@02-22-06.backup\"\\).Length / 1MB)"
+      "PowerShell(cd \"C:\\\\Users\\\\USUARIO\\\\Documents\\\\Personales\\\\Datapath\\\\Cloude Code for Developers\\\\Tareas\\\\Entregas\\\\taskflow-v3\"; \\(Get-Item \"db_cluster-17-04-2025@02-22-06.backup\"\\).Length / 1MB)",
+      "Bash(node -e \"const pkg = require\\('./node_modules/next/package.json'\\); console.log\\(pkg.version\\)\")",
+      "Bash(node *)"
     ]
   }
 }

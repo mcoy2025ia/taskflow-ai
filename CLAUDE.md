@@ -38,7 +38,7 @@ npx dotenv -e .env.local -- npx tsx scripts/seed-embeddings.ts  # backfill embed
 ```
 
 ### Tests unitarios (Vitest)
-Los tests viven en `src/actions/__tests__/`, `src/hooks/__tests__/`, `src/lib/__tests__/` y `src/lib/ai/__tests__/`. Usan mocks de Supabase vía `makeChain()`. Setup global en `src/test/setup.ts`. Cobertura mínima configurada al 70% (lines/functions/branches/statements) sobre los archivos listados en `vitest.config.ts`.
+Los tests viven en `src/actions/__tests__/` (tasks), `src/hooks/__tests__/` (use-tasks-by-status), `src/lib/__tests__/` (hmac), `src/lib/ai/__tests__/` (voyage, rag), `src/lib/analytics/__tests__/` (metrics) y `src/lib/validations/__tests__/` (schemas). Usan mocks de Supabase vía `makeChain()`. Setup global en `src/test/setup.ts`. Cobertura mínima configurada al 70% (lines/functions/branches/statements), y solo se mide sobre los 8 archivos del `include` en `vitest.config.ts` (no sobre todo el repo).
 
 Para correr un solo archivo: `npx vitest run src/lib/__tests__/hmac.test.ts`
 

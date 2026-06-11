@@ -1,8 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { ratelimit } from '@/lib/ratelimit'
 import { isBot, botBlockResponse } from '@/lib/bot-guard'
 import type { TaskRow, AnalyticsMetrics } from '@/lib/analytics/metrics'
+
+const TaskRowSchema = z.object({
+  status:     z.enum(['todo', 'in_progress', 'done']),
+  priority:   z.enum(['low', 'medium', 'high']),
+  due_date:   z.string().max(30).nullable(),
+  created_at: z.string().max(30),
+  title:      z.string().max(200).optional(),
+})
+
+const AnalyticsMetricsSchema = z.object({
+  total:            z.number().int().min(0).max(100_000),
+  done:             z.number().int().min(0).max(100_000),
+  inProgress:       z.number().int().min(0).max(100_000),
+  todo:             z.number().int().min(0).max(100_000),
+  pct:              z.number().min(0).max(100),
+  overdue:          z.number().int().min(0).max(100_000),
+  pending:          z.number().int().min(0).max(100_000),
+  daysElapsed:      z.number().int().min(0).max(3650),
+  daysLeft:         z.number().int().min(0).max(3650),
+  totalDays:        z.number().int().min(0).max(3650),
+  velocityActual:   z.string().max(20),
+  velocityRequired: z.string().max(20),
+  velocityWeekly:   z.string().max(20),
+  atRisk:           z.boolean(),
+  burndown:         z.array(z.unknown()),
+  phaseReal:        z.array(z.unknown()),
+  weeks:            z.array(z.unknown()),
+})
+
+const AuditBodySchema = z.object({
+  tasks:       z.array(TaskRowSchema).max(1000),
+  metrics:     AnalyticsMetricsSchema,
+  projectName: z.string().max(200),
+})
 
 export const runtime = 'nodejs'
 
@@ -146,13 +181,19 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { tasks, metrics, projectName } = await request.json() as {
+  const body = await request.json().catch(() => null)
+  const parsed = AuditBodySchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Payload inválido' }, { status: 400 })
+  }
+
+  const { tasks, metrics, projectName } = parsed.data as {
     tasks: TaskRow[]
     metrics: AnalyticsMetrics
     projectName: string
   }
 
-  if (!tasks?.length || !metrics) {
+  if (!tasks.length) {
     return NextResponse.json({ error: 'Faltan datos para la auditoría' }, { status: 400 })
   }
 
