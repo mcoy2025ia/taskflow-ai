@@ -37,6 +37,10 @@ async function BoardTasks({ projectId }: { projectId?: string }) {
       .limit(1)
       .maybeSingle()
     resolvedProjectId = firstProject?.id
+    // Redirect so the URL always carries project_id — keeps client context in sync
+    if (resolvedProjectId) {
+      redirect(`/board?project_id=${resolvedProjectId}`)
+    }
   }
 
   // Fetch tasks with assignees in parallel with member profiles

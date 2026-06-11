@@ -33,11 +33,17 @@ export function ProjectSwitcher() {
     getProjects().then(result => {
       if (result.success) {
         setProjects(result.data)
-        // Auto-select first project if none stored or stored one no longer exists
-        const stored = result.data.find(p => p.id === activeProject?.id)
-        if (!stored && result.data.length > 0) {
-          const first = result.data[0]
-          setActiveProject({ id: first.id, name: first.name, role: first.role })
+        // URL project_id always wins over stored localStorage value
+        const urlProjectId = new URLSearchParams(window.location.search).get('project_id')
+        const urlMatch = urlProjectId ? result.data.find(p => p.id === urlProjectId) : null
+        if (urlMatch) {
+          setActiveProject({ id: urlMatch.id, name: urlMatch.name, role: urlMatch.role })
+        } else {
+          const stored = result.data.find(p => p.id === activeProject?.id)
+          if (!stored && result.data.length > 0) {
+            const first = result.data[0]
+            setActiveProject({ id: first.id, name: first.name, role: first.role })
+          }
         }
       }
     })
