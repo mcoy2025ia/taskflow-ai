@@ -7,7 +7,7 @@ const SUPABASE_HOST = SUPABASE_URL ? new URL(SUPABASE_URL).hostname : ''
 const nextConfig: NextConfig = {
   // These packages use Node.js-specific internals (crypto, tls, net) that webpack
   // cannot bundle for the App Router runtime. Resolving them externally prevents
-  // the "module-not-found" error when any route imports ratelimit.ts → @upstash/redis.
+  // the "module-not-found" error when any route imports ratelimit.ts -> @upstash/redis.
   serverExternalPackages: ['@upstash/redis', '@upstash/ratelimit'],
 
   // Allow HMR from VirtualBox host-only network in local dev

@@ -27,9 +27,9 @@ export function GuestButton() {
       <button
         onClick={handleGuest}
         disabled={isPending}
-        className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed underline underline-offset-4 transition-colors"
+        className="rounded-[7px] px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isPending ? 'Entrando…' : 'Entrar como invitado'}
+        {isPending ? 'Entrando...' : 'Explorar como invitado'}
       </button>
       {error && (
         <p className="text-xs text-destructive text-center">{error}</p>

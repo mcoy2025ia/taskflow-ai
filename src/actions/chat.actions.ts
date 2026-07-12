@@ -64,7 +64,7 @@ export async function getChatMessages(sessionId: string): Promise<ChatMessageRow
     .eq('user_id', user.id)
     .order('created_at', { ascending: true })
 
-  return data ?? []
+  return (data ?? []) as ChatMessageRow[]
 }
 
 export async function saveMessages(

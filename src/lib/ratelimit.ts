@@ -76,13 +76,21 @@ async function check(
     return { limited: false, headers: {} }
   }
 
-  const { success, limit, remaining, reset } = await getLimiter().limit(identifier)
-  const headers: Record<string, string> = {
-    'X-RateLimit-Limit': String(limit),
-    'X-RateLimit-Remaining': String(remaining),
-    'X-RateLimit-Reset': String(reset),
+  try {
+    const { success, limit, remaining, reset } = await getLimiter().limit(identifier)
+    const headers: Record<string, string> = {
+      'X-RateLimit-Limit': String(limit),
+      'X-RateLimit-Remaining': String(remaining),
+      'X-RateLimit-Reset': String(reset),
+    }
+    return { limited: !success, headers }
+  } catch (err) {
+    // Upstash inalcanzable (DNS, timeout, instancia eliminada) → fail-open.
+    // El rate limiting es protección de costos/abuso, no un límite de seguridad;
+    // preferimos dejar pasar la request antes que tumbar el feature completo.
+    console.warn('[ratelimit] Upstash no disponible, dejando pasar sin límite:', err)
+    return { limited: false, headers: {} }
   }
-  return { limited: !success, headers }
 }
 
 export const ratelimit = {

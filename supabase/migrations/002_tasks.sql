@@ -7,7 +7,7 @@ create type public.task_priority as enum ('low', 'medium', 'high');
 
 -- 3. Creación de la tabla principal
 create table if not exists public.tasks (
-  id          uuid primary key default extensions.uuid_generate_v4(),
+  id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users(id) on delete cascade,
   title       text not null check (char_length(title) between 1 and 200),
   description text check (char_length(description) <= 2000),

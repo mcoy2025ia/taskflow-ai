@@ -1,6 +1,6 @@
 -- ── Tabla de proyectos ────────────────────────────────────────────────────────
 create table if not exists public.projects (
-  id            uuid primary key default uuid_generate_v4(),
+  id            uuid primary key default gen_random_uuid(),
   user_id       uuid not null references auth.users(id) on delete cascade,
   name          text not null,
   start_date    date not null,
@@ -10,7 +10,7 @@ create table if not exists public.projects (
 
 -- ── Fases del proyecto ────────────────────────────────────────────────────────
 create table if not exists public.project_phases (
-  id          uuid primary key default uuid_generate_v4(),
+  id          uuid primary key default gen_random_uuid(),
   project_id  uuid not null references public.projects(id) on delete cascade,
   name        text not null,
   total       int  not null default 0,

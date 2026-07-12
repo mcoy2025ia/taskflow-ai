@@ -1133,6 +1133,52 @@ footer {
   50%       { transform: translateX(3px); }
 }
 
+/* ── TAB VERDE — "¿Qué hace?" highlight ──────────────────── */
+.tab-btn.green-tab {
+  color: #6ee7b7;
+  border-color: rgba(16,185,129,0.45);
+  background: rgba(16,185,129,0.1);
+  position: relative;
+  animation: tab-green-pulse 2.4s ease-in-out infinite;
+}
+
+.tab-btn.green-tab::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  background: linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(52,211,153,0.08) 100%);
+  z-index: -1;
+}
+
+.tab-btn.green-tab::after {
+  content: '';
+  position: absolute;
+  top: 7px; right: 8px;
+  width: 6px; height: 6px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #10b981, 0 0 12px rgba(16,185,129,0.7);
+  animation: tab-dot-blink 1.2s ease-in-out infinite;
+}
+
+.tab-btn.green-tab:hover { color: #a7f3d0; }
+
+.tab-btn.green-tab.active {
+  animation: none;
+  color: #34d399;
+  background: var(--carbon);
+  border-color: rgba(16,185,129,0.45);
+  border-bottom-color: var(--carbon);
+}
+
+.tab-btn.green-tab.active::after { display: none; }
+
+@keyframes tab-green-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); border-color: rgba(16,185,129,0.45); }
+  50%       { box-shadow: 0 0 0 4px rgba(16,185,129,0.15), 0 0 20px rgba(16,185,129,0.25); border-color: rgba(52,211,153,0.8); }
+}
+
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 
@@ -1731,6 +1777,7 @@ footer {
   <a class="nav-item" onclick="togglePhase('f15')"><span class="nav-num">15</span><span class="nav-text">Onboarding</span></a>
   <a class="nav-item" onclick="togglePhase('f16')"><span class="nav-num">16</span><span class="nav-text">Auditoría Post-Build</span></a>
   <a class="nav-item" onclick="togglePhase('f17')"><span class="nav-num">✓</span><span class="nav-text">Pre-Deploy</span></a>
+  <a class="nav-item" onclick="togglePhase('f18')"><span class="nav-num">17</span><span class="nav-text">Operación en Prod</span></a>
 </nav>
 
 <!-- ═══════════════════════════════════════════════════════ MAIN ═══ -->
@@ -1753,13 +1800,13 @@ footer {
         </div>
 
         <h1>TaskFlow <span class="version">v3</span><br><span class="accent">Guía de Construcción</span></h1>
-        <p class="header-sub">Debate entre tres expertos — Diego Vargas, Valentina Torres y Sebastián Mora — sintetizado en pasos ejecutables. Seguridad, IA y arquitectura SaaS en 17 fases. Tab <strong>Reutilizar</strong> → guía de setup completa.</p>
+        <p class="header-sub">Debate entre tres expertos — Diego Vargas, Valentina Torres y Sebastián Mora — sintetizado en pasos ejecutables. Seguridad, IA y arquitectura SaaS en 18 fases, incluida la operación real en producción. Tab <strong>Reutilizar</strong> → guía de setup completa.</p>
       </div>
 
       <div class="header-meta">
-        <div class="meta-item">Stack <span>Next.js 16 · Supabase · Groq · Voyage AI</span></div>
+        <div class="meta-item">Stack <span>Next.js 16 · Supabase · DeepSeek · Voyage AI</span></div>
         <div class="meta-item">Seguridad <span>RLS + HMAC + Rate Limit</span></div>
-        <div class="meta-item">IA <span>RAG Híbrido + Agente Tool-Calling · Audit 2026-06-10</span></div>
+        <div class="meta-item">IA <span>RAG Híbrido + Agente Tool-Calling · Ops 2026-07-11</span></div>
         <div class="meta-item">Tests <span>Vitest · Lighthouse CI · E2E</span></div>
         <div class="meta-item">Deploy <span>Vercel · Upstash · Sentry</span></div>
       </div>
@@ -1773,7 +1820,7 @@ footer {
   <div class="tab-bar">
     <button class="tab-btn" data-tab="guide"   onclick="switchTab('guide')">Guía de Construcción</button>
     <button class="tab-btn cta-tab" data-tab="diagram" onclick="switchTab('diagram')">Cómo funciona<span class="cta-arrow">→</span></button>
-    <button class="tab-btn" data-tab="features" onclick="switchTab('features')">¿Qué hace?</button>
+    <button class="tab-btn green-tab" data-tab="features" onclick="switchTab('features')">¿Qué hace?</button>
     <button class="tab-btn" data-tab="setup" onclick="switchTab('setup')">Reutilizar</button>
   </div>
 </div>
@@ -1830,6 +1877,7 @@ footer {
       <div class="toc-item fade-in" onclick="togglePhase('f14')"><span class="toc-num">F·14</span><span class="toc-text">CI/CD Pipeline</span></div>
       <div class="toc-item fade-in" onclick="togglePhase('f15')"><span class="toc-num">F·15</span><span class="toc-text">Onboarding Demo</span></div>
       <div class="toc-item fade-in" onclick="togglePhase('f16')" style="border-color:rgba(220,38,38,0.25);background:rgba(220,38,38,0.04);"><span class="toc-num" style="color:#fca5a5;background:rgba(220,38,38,0.12);border-color:rgba(220,38,38,0.2);">F·16</span><span class="toc-text">Auditoría Post-Build</span></div>
+      <div class="toc-item fade-in" onclick="togglePhase('f18')" style="border-color:rgba(16,185,129,0.25);background:rgba(16,185,129,0.04);"><span class="toc-num" style="color:#6ee7b7;background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.2);">F·17</span><span class="toc-text">Operación en Producción</span></div>
     </div>
   </div>
 </section>
@@ -1875,7 +1923,7 @@ footer {
             <div class="arch-row">
               <span class="arch-node secondary">/api/chat (Node.js)</span>
               <span class="arch-arrow">→</span>
-              <span class="arch-node secondary">Groq LLM</span>
+              <span class="arch-node secondary">DeepSeek LLM</span>
               <span class="arch-arrow">→</span>
               <span class="arch-node secondary">Tools</span>
               <span class="arch-arrow">→</span>
@@ -1926,7 +1974,8 @@ footer {
 <span class="cmt">009_profiles_collab.sql</span>        <span class="cmt">← get_project_member_profiles (SECURITY DEFINER)</span>
 <span class="cmt">010_realtime.sql</span>               <span class="cmt">← publication Realtime en tasks y task_assignments</span>
 <span class="cmt">011_fix_search_signature.sql</span>   <span class="cmt">← realinea firma de search_tasks_by_embedding con rag.ts</span>
-<span class="cmt">012_fix_tasks_rls_update.sql</span>   <span class="cmt">← WITH CHECK correcto + trigger user_id inmutable</span></pre>
+<span class="cmt">012_fix_tasks_rls_update.sql</span>   <span class="cmt">← WITH CHECK correcto + trigger user_id inmutable</span>
+<span class="cmt">013_project_company_fields.sql</span> <span class="cmt">← company + department en projects (contexto organizacional)</span></pre>
           </div>
         </div>
 
@@ -2007,11 +2056,12 @@ $$;
   NEXT_PUBLIC_SUPABASE_URL:      z.<span class="fn">string</span>().<span class="fn">url</span>(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">1</span>),
   SUPABASE_SERVICE_ROLE_KEY:     z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">1</span>),
-  GROQ_API_KEY:                  z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">1</span>),
+  DEEPSEEK_API_KEY:              z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">1</span>).<span class="fn">optional</span>(),
+  GROQ_API_KEY:                  z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">1</span>).<span class="fn">optional</span>(),
   VOYAGE_API_KEY:                z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">1</span>),
   EMBED_INTERNAL_SECRET:         z.<span class="fn">string</span>().<span class="fn">min</span>(<span class="num">32</span>),  <span class="cmt">// mínimo 32 chars</span>
   NEXT_PUBLIC_APP_URL:           z.<span class="fn">string</span>().<span class="fn">url</span>(),
-  CHAT_PROVIDER:                 z.<span class="fn">enum</span>([<span class="str">'groq'</span>, <span class="str">'ollama'</span>]).<span class="fn">default</span>(<span class="str">'groq'</span>),
+  CHAT_PROVIDER:                 z.<span class="fn">enum</span>([<span class="str">'deepseek'</span>, <span class="str">'groq'</span>, <span class="str">'ollama'</span>]).<span class="fn">default</span>(<span class="str">'deepseek'</span>),
   <span class="cmt">// Opcionales — sin Upstash el rate limit está desactivado en dev local</span>
   UPSTASH_REDIS_REST_URL:        z.<span class="fn">string</span>().<span class="fn">url</span>().<span class="fn">optional</span>(),
   UPSTASH_REDIS_REST_TOKEN:      z.<span class="fn">string</span>().<span class="fn">optional</span>(),
@@ -2718,7 +2768,7 @@ Sentry.<span class="fn">captureException</span>(error, {
             <div class="check-item"><code>SUPABASE_SERVICE_ROLE_KEY</code> → marcado Sensitive</div>
             <div class="check-item"><code>EMBED_INTERNAL_SECRET</code> → 64 chars hex</div>
             <div class="check-item"><code>NEXT_PUBLIC_APP_URL</code> → sin barra final</div>
-            <div class="check-item"><code>GROQ_API_KEY</code> → plan con rate limit adecuado</div>
+            <div class="check-item"><code>DEEPSEEK_API_KEY</code> + <code>CHAT_PROVIDER=deepseek</code></div>
           </div>
           <div class="checklist-group">
             <div class="checklist-title">🛡️ Seguridad</div>
@@ -2738,6 +2788,131 @@ Sentry.<span class="fn">captureException</span>(error, {
             <div class="check-item">Exportar HTML → descarga con narrativo generado por LLM</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- FASE 17: OPERACIÓN EN PRODUCCIÓN -->
+    <div class="phase-section" id="f18">
+      <div class="phase-header" onclick="togglePhase('f18')">
+        <span class="phase-num" style="background:rgba(16,185,129,0.15);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);">FASE 17</span>
+        <div><div class="phase-title">Operación en Producción — Incidentes Reales</div><div class="phase-subtitle">Rescate de infraestructura · Migración de LLM · Fail-open · Modo invitado · Julio 2026</div></div>
+        <div class="phase-toggle"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="phase-body">
+        <div class="pt-md"></div>
+
+        <div class="decision-box" style="border-left-color:#10b981;">
+          <div class="decision-label" style="color:#6ee7b7;">▸ Por qué existe esta fase</div>
+          <div class="decision-text">Construir es la mitad del trabajo. Esta fase documenta lo que pasó <strong style="color:var(--blue-glow);">después</strong> del primer deploy: dependencias externas que murieron sin aviso, tiers gratuitos que se pausan solos, y el primer usuario invitado que borró el tablero demo completo. Cada incidente dejó un patrón de defensa reutilizable.</div>
+        </div>
+
+        <!-- Incidente 1: Supabase -->
+        <div class="step-block">
+          <div class="step-heading"><span class="step-tag" style="color:#6ee7b7;background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.2);">INCIDENTE 1</span> Proyecto Supabase perdido — restauración desde cero</div>
+
+          <div class="trap" style="background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.2);border-left:3px solid #10b981;">
+            <div class="trap-icon">🗄️</div>
+            <div class="trap-content">
+              <div class="trap-who" style="color:#6ee7b7;">uuid_generate_v4() no existe en proyectos Supabase nuevos · <strong>RESUELTO</strong></div>
+              <div class="trap-text">Al aplicar las migraciones en el proyecto restaurado, <code>003_embeddings.sql</code> falló con <code>42883: function uuid_generate_v4() does not exist</code> — la extensión <code>uuid-ossp</code> no se instala igual en todos los proyectos. Corrección: reemplazo global por <code>gen_random_uuid()</code> (nativa de PostgreSQL 13+, sin extensión). Regla: <strong>nunca dependas de uuid-ossp en migraciones nuevas</strong>.</div>
+            </div>
+          </div>
+
+          <div class="trap" style="background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.2);border-left:3px solid #10b981;">
+            <div class="trap-icon">🌱</div>
+            <div class="trap-content">
+              <div class="trap-who" style="color:#6ee7b7;">Re-seed completo: 60 tareas Olist · 5 roles · 60 embeddings</div>
+              <div class="trap-text">Proyecto "Olist E-commerce Analytics &amp; ML" (Sodimac · Mercadeo) con 6 fases (Análisis → Bronze → Silver → Gold → ML → Reportes), equipo de 5 roles (Data Engineer, ML Engineer, Data Analyst, Business Analyst, Scrum Master) y embeddings Voyage regenerados respetando el límite de <strong>3 RPM del tier gratuito</strong> (21s entre requests — no los 100/min del tier pago). La migración <code>013_project_company_fields.sql</code> agregó <code>company</code> y <code>department</code> a projects.</div>
+            </div>
+          </div>
+
+          <div class="trap" style="background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.2);border-left:3px solid #10b981;">
+            <div class="trap-icon">🔒</div>
+            <div class="trap-content">
+              <div class="trap-who" style="color:#6ee7b7;">El trigger de user_id inmutable se respeta — no se salta</div>
+              <div class="trap-text">Al reasignar las tareas por rol, el trigger <code>trg_tasks_immutable_user_id</code> (FASE 16, BLOCKER #3) bloqueó los UPDATE de <code>user_id</code> — incluso con service_role. Decisión correcta: no saltarlo. <code>tasks.user_id</code> = creador inmutable; <code>task_assignments</code> = asignación mutable y <strong>fuente de verdad para avatares y filtros del Kanban</strong>. La protección de seguridad forzó el diseño correcto.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Incidente 2: Upstash -->
+        <div class="step-block">
+          <div class="step-heading"><span class="step-tag" style="color:#fca5a5;background:rgba(220,38,38,0.1);border-color:rgba(220,38,38,0.2);">INCIDENTE 2</span> Upstash eliminado — el rate limiter tumbó el chat completo</div>
+
+          <div class="trap" style="background:rgba(220,38,38,0.04);border:1px solid rgba(220,38,38,0.2);border-left:3px solid #dc2626;">
+            <div class="trap-icon">🔴</div>
+            <div class="trap-content">
+              <div class="trap-who" style="color:#fca5a5;">DNS ENOTFOUND en Redis → 500 en /api/chat, /api/report y /api/audit · <strong>CORREGIDO</strong> (ratelimit.ts)</div>
+              <div class="trap-text">La instancia de Upstash fue eliminada (dominio inexistente). <code>ratelimit.ts</code> verificaba que las env vars <em>existieran</em>, pero no capturaba el fallo de red de <code>.limit()</code> — la excepción tumbaba las 3 rutas con 500. El síntoma visible era engañoso: <em>"Sin análisis narrativo disponible"</em> en el informe PDF, que parecía un bug del LLM. Corrección: <strong>fail-open</strong> con try/catch — si Redis no responde, la request pasa sin límite y se loguea el warning. Lección: el rate limiting es protección de costos/abuso, <strong>no un control de seguridad</strong> — jamás debe ser single point of failure del producto.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Incidente 3: middleware -->
+        <div class="step-block">
+          <div class="step-heading"><span class="step-tag" style="color:#fbbf24;background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.2);">INCIDENTE 3</span> "This page couldn't load" — el middleware sin timeout</div>
+
+          <div class="trap" style="background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.2);border-left:3px solid #f59e0b;">
+            <div class="trap-icon">⏱️</div>
+            <div class="trap-content">
+              <div class="trap-who" style="color:#fbbf24;">Supabase free-tier se pausa por inactividad → getUser() cuelga toda navegación · <strong>MITIGADO</strong> (middleware.ts)</div>
+              <div class="trap-text"><code>middleware.ts</code> llama <code>supabase.auth.getUser()</code> en <strong>cada navegación</strong>. Cuando Supabase (plan gratuito) se pausa y tarda en despertar, esa llamada se cuelga indefinidamente — el navegador muestra el error genérico de conexión. Corrección: <code>Promise.race</code> con timeout de 5s que trata el timeout como no-autenticado y redirige a <code>/login</code>. No evita la pausa de Supabase, pero convierte "pestaña muerta" en "recarga y funciona".</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Migración DeepSeek -->
+        <div class="step-block">
+          <div class="step-heading"><span class="step-tag">MIGRACIÓN LLM</span> Groq → DeepSeek sin reescribir el agente</div>
+          <table class="data-table">
+            <thead><tr><th>Qué se tocó</th><th>Archivo</th><th>Detalle</th></tr></thead>
+            <tbody>
+              <tr><td>Selección de proveedor</td><td><code style="font-family:var(--font-mono);font-size:11px;">agent.ts</code></td><td>Rama <code>IS_DEEPSEEK</code> + <code>PROVIDER_LABEL</code> para errores/logs; default <code>deepseek</code></td></tr>
+              <tr><td>Factory de chat</td><td><code style="font-family:var(--font-mono);font-size:11px;">chat.ts</code></td><td><code>DeepSeekProvider</code> agregado a <code>getChatProvider()</code></td></tr>
+              <tr><td>Informe ejecutivo + auditoría</td><td><code style="font-family:var(--font-mono);font-size:11px;">api/report · api/audit</code></td><td><code>deepseek-chat</code> directo; fallback Haiku intacto</td></tr>
+              <tr><td>Generación de tareas demo</td><td><code style="font-family:var(--font-mono);font-size:11px;">import.actions.ts</code></td><td><code>DEEPSEEK_API_KEY</code> + base URL <code>api.deepseek.com/v1</code></td></tr>
+              <tr><td>Validación de entorno</td><td><code style="font-family:var(--font-mono);font-size:11px;">env.ts</code></td><td><code>CHAT_PROVIDER</code> enum triple; <code>GROQ_API_KEY</code> pasa a opcional</td></tr>
+            </tbody>
+          </table>
+          <div class="decision-box" style="margin-top:12px;">
+            <div class="decision-label">▸ Por qué fue barato migrar — y cómo se verificó</div>
+            <div class="decision-text">La API de DeepSeek es <strong style="color:var(--blue-glow);">OpenAI-compatible</strong>: mismo formato de <code>tool_calls</code>, mismo SSE <code>data: {...}</code>. El parser del agente no cambió ni una línea. Antes de desplegar se verificó por capas contra la API real: (1) completion básica, (2) tool calling con una tool del agente, (3) streaming. Bonus: el alias <code>deepseek-chat</code> resuelve server-side al modelo vigente (hoy <code>deepseek-v4-flash</code>) — sin hardcodear versiones. Nota operativa: en Vercel las env vars son <em>Sensitive</em> por defecto y <code>vercel build</code> local no puede leerlas — el deploy debe ser <code>vercel deploy --prod</code> (build en la nube).</div>
+          </div>
+        </div>
+
+        <!-- Modo invitado -->
+        <div class="step-block">
+          <div class="step-heading"><span class="step-tag" style="color:#fca5a5;background:rgba(220,38,38,0.1);border-color:rgba(220,38,38,0.2);">INCIDENTE 4</span> El primer invitado borró el tablero demo</div>
+
+          <div class="trap" style="background:rgba(220,38,38,0.04);border:1px solid rgba(220,38,38,0.2);border-left:3px solid #dc2626;">
+            <div class="trap-icon">👤</div>
+            <div class="trap-content">
+              <div class="trap-who" style="color:#fca5a5;">Cuenta demo compartida con botón "Limpiar" habilitado · <strong>CORREGIDO en doble capa</strong></div>
+              <div class="trap-text">El login de invitado (<code>DEMO_EMAIL</code>) compartía permisos con cualquier usuario — incluido <code>deleteAllTasks</code>. Un solo visitante podía vaciar el demo para todos los siguientes. Corrección en <strong>dos capas obligatorias</strong>: (1) UI — el botón redirige a <code>/register</code> en vez de abrir el diálogo destructivo (<code>board-actions.tsx</code>); (2) Server Action — <code>deleteAllTasks</code> rechaza explícitamente si <code>user.email === env.DEMO_EMAIL</code>, porque la UI se puede saltar invocando la action directo. Regla nueva de seguridad: <strong>toda acción destructiva futura replica ambas capas</strong>.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prompt transparente -->
+        <div class="step-block">
+          <div class="step-heading"><span class="step-tag">UX + IA</span> "Generar con IA" — el usuario revisa el prompt antes de gastar tokens</div>
+          <div class="decision-box">
+            <div class="decision-label">▸ De botón opaco a modal transparente</div>
+            <div class="decision-text">El botón generaba 90 tareas con un prompt hardcodeado invisible. Ahora abre un modal que pide <strong style="color:var(--blue-glow);">empresa, proyecto/área y participantes</strong> (chips con los miembros reales del proyecto, prefill desde <code>projects.company/department</code>), muestra las instrucciones completas en un textarea editable con botón de restaurar, y un <code>&lt;details&gt;</code> con el prompt final exacto que se enviará. Detalle de arquitectura: el prompt default vive en <code>src/lib/ai/generate-tasks-prompt.ts</code> — un módulo <code>'use server'</code> solo puede exportar funciones async, no constantes, así que compartir el texto entre server y client exige un módulo aparte. <code>generateTasksCSV(customPrompt?)</code> valida con Zod (<code>max 4000</code>) antes de llamar al LLM.</div>
+          </div>
+        </div>
+
+        <!-- Patrones -->
+        <div class="decision-box" style="border-left-color:#10b981;">
+          <div class="decision-label" style="color:#6ee7b7;">▸ Patrones que deja esta fase</div>
+          <div class="decision-text">
+            <strong style="color:var(--blue-glow);">Fail-open en dependencias no críticas</strong> — si un servicio auxiliar (rate limit, telemetría) muere, el producto sigue; solo las dependencias de seguridad fallan cerrado.<br><br>
+            <strong style="color:var(--blue-glow);">Timeout en todo I/O del hot path</strong> — cualquier fetch en middleware o layout necesita <code>Promise.race</code>; sin timeout, la latencia de un tercero se convierte en tu downtime.<br><br>
+            <strong style="color:var(--blue-glow);">Doble capa para acciones destructivas</strong> — UI que guía + Server Action que rechaza. La UI es UX, el servidor es la seguridad.<br><br>
+            <strong style="color:var(--blue-glow);">Abstracción OpenAI-compatible</strong> — cambiar de proveedor LLM costó ~1 hora porque el agente habla el dialecto común, no el SDK de un vendor.
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -2772,6 +2947,12 @@ Sentry.<span class="fn">captureException</span>(error, {
         <tr><td>Rate limit</td><td>Por user.id en endpoints auth</td><td>IP compartida genera falsos positivos</td></tr>
         <tr><td>Tests E2E</td><td>DB real de staging</td><td>Bugs de RLS son invisibles con mocks</td></tr>
         <tr><td>CI/CD</td><td>Build prebuilt en Vercel</td><td>Lo que CI testea es exactamente lo que se deploya</td></tr>
+        <tr><td>LLM principal</td><td>DeepSeek deepseek-chat (OpenAI-compatible)</td><td>Migración desde Groq en ~1h: mismo formato tool_calls y SSE; sin vendor lock-in</td></tr>
+        <tr><td>Rate limiting</td><td>Fail-open si Redis no responde</td><td>Upstash eliminado tumbó chat/report/audit; protección de costos ≠ control de seguridad</td></tr>
+        <tr><td>Middleware auth</td><td>Promise.race con timeout 5s</td><td>Supabase pausado colgaba toda navegación — fail fast a /login</td></tr>
+        <tr><td>Cuenta demo</td><td>Bloqueo destructivo en UI + Server Action</td><td>La UI se puede saltar; el servidor es la capa de seguridad real</td></tr>
+        <tr><td>UUIDs en migraciones</td><td>gen_random_uuid() nativo, nunca uuid-ossp</td><td>La extensión no existe garantizada en proyectos Supabase nuevos</td></tr>
+        <tr><td>Prompts de generación</td><td>Visibles y editables antes de enviar</td><td>El usuario aprueba contexto (empresa/área/equipo) y gasto de tokens</td></tr>
       </tbody>
     </table>
   </div>
@@ -2801,12 +2982,12 @@ Sentry.<span class="fn">captureException</span>(error, {
 <div class="model-info-panel" id="model-panel">
   <div class="model-info-title">🤖 Modelos de IA — TaskFlow v3</div>
   <div class="model-row">
-    <span class="model-badge">GROQ</span>
-    <div class="model-desc"><strong style="color:var(--blue-ice);">llama-3.3-70b-versatile</strong> — LLM principal. Tool calling paralelo, streaming SSE, context 128k. Latencia media: ~800ms primer token.</div>
+    <span class="model-badge">DEEPSEEK</span>
+    <div class="model-desc"><strong style="color:var(--blue-ice);">deepseek-chat</strong> — LLM principal (API OpenAI-compatible; el alias resuelve al modelo vigente, hoy deepseek-v4-flash). Tool calling, streaming SSE. Alternativas vía <code style="font-size:10px;background:rgba(99,102,241,0.12);color:#a5b4fc;padding:1px 5px;border-radius:3px;">CHAT_PROVIDER</code>: groq | ollama.</div>
   </div>
   <div class="model-row">
     <span class="model-badge">FALLBACK</span>
-    <div class="model-desc"><strong style="color:var(--blue-ice);">Claude Haiku 4.5</strong> — Activado si Groq no responde en 10s. Mismas tools, mismo system prompt. Transparente para el usuario.</div>
+    <div class="model-desc"><strong style="color:var(--blue-ice);">Claude Haiku 4.5</strong> — Activado si DeepSeek no responde en 10s. Mismas tools, mismo system prompt. Transparente para el usuario.</div>
   </div>
   <div class="model-row">
     <span class="model-badge">EMBED</span>
@@ -2878,7 +3059,7 @@ Sentry.<span class="fn">captureException</span>(error, {
               <div class="flow-arrow">↓</div>
               <span class="flow-node ai" data-tip="Pipeline RAG híbrido: detecta intención estructural + búsqueda vectorial + reranking. Ver Diagrama 2 para detalle." data-type="ai" onclick="showModelPanel()">🔍 Pipeline RAG → top-5 tareas relevantes</span>
               <div class="flow-arrow">↓</div>
-              <span class="flow-node ai" data-tip="Llama-3.3-70b-versatile en Groq. Recibe system prompt + historial + contexto RAG. Genera respuesta con o sin tool calls." data-type="ai" onclick="showModelPanel()">🧠 Groq LLM · llama-3.3-70b + tool calling</span>
+              <span class="flow-node ai" data-tip="deepseek-chat (API OpenAI-compatible). Recibe system prompt + historial + contexto RAG. Genera respuesta con o sin tool calls." data-type="ai" onclick="showModelPanel()">🧠 DeepSeek LLM · deepseek-chat + tool calling</span>
               <div class="flow-arrow">↓</div>
 
               <!-- BRANCH: 3 caminos -->
@@ -3157,7 +3338,7 @@ Sentry.<span class="fn">captureException</span>(error, {
         <div class="feat-card-title">Agente IA con herramientas</div>
         <div class="feat-card-desc">Escribe "crea una tarea urgente para revisar el dashboard" y el agente la crea, la categoriza y la posiciona en el tablero. Las tools se ejecutan en paralelo cuando el LLM las solicita simultáneamente. Acciones destructivas requieren confirmación explícita — el endpoint de confirmación tiene allowlist estricta: solo <code>delete_task</code> puede atravesarlo.</div>
         <div class="feat-tags">
-          <span class="feat-tag violet">llama-3.3-70b</span>
+          <span class="feat-tag violet">deepseek-chat</span>
           <span class="feat-tag violet">Tool calling</span>
           <span class="feat-tag amber">confirm_required</span>
           <span class="feat-tag">SSE streaming</span>
@@ -3216,6 +3397,32 @@ Sentry.<span class="fn">captureException</span>(error, {
         </div>
       </div>
 
+      <!-- 7 Generación con IA -->
+      <div class="feat-card" style="--feat-color:#a78bfa;">
+        <span class="feat-icon">✨</span>
+        <div class="feat-card-title">Generación de backlog con IA — prompt transparente</div>
+        <div class="feat-card-desc">En un tablero vacío, "Generar con IA" abre un modal que pide empresa, proyecto/área y quiénes participan (chips con los miembros reales del equipo). El usuario ve y puede editar el prompt completo antes de enviarlo — nada de cajas negras. El CSV resultante pasa por la misma validación Zod que un import manual.</div>
+        <div class="feat-tags">
+          <span class="feat-tag violet">DeepSeek</span>
+          <span class="feat-tag violet">Prompt editable</span>
+          <span class="feat-tag amber">Contexto de equipo</span>
+          <span class="feat-tag">Preview + Zod</span>
+        </div>
+      </div>
+
+      <!-- 8 Modo invitado -->
+      <div class="feat-card" style="--feat-color:#34d399;">
+        <span class="feat-icon">🛡️</span>
+        <div class="feat-card-title">Modo invitado con demo protegida</div>
+        <div class="feat-card-desc">"Explorar como invitado" entra con una cuenta demo compartida al proyecto Olist completo (60 tareas, 5 roles, embeddings). Las acciones destructivas están bloqueadas en doble capa: la UI redirige a crear cuenta propia, y la Server Action rechaza la operación aunque se invoque directo — el primer visitante no puede vaciar el demo del siguiente.</div>
+        <div class="feat-tags">
+          <span class="feat-tag green">DEMO_EMAIL</span>
+          <span class="feat-tag rose">Doble capa</span>
+          <span class="feat-tag">Proyecto Olist seed</span>
+          <span class="feat-tag slate">/register redirect</span>
+        </div>
+      </div>
+
     </div>
 
     <!-- STACK -->
@@ -3248,7 +3455,7 @@ Sentry.<span class="fn">captureException</span>(error, {
         <div class="feat-stack-row">
           <div class="feat-stack-layer-name">IA & ML</div>
           <div class="feat-stack-badges">
-            <span class="feat-stack-badge ai">Groq · llama-3.3-70b</span>
+            <span class="feat-stack-badge ai">DeepSeek · deepseek-chat</span>
             <span class="feat-stack-badge ai">Claude Haiku 4.5</span>
             <span class="feat-stack-badge ai">Voyage voyage-3-lite</span>
             <span class="feat-stack-badge ai">Voyage rerank-2-lite</span>
@@ -3361,7 +3568,7 @@ Sentry.<span class="fn">captureException</span>(error, {
           <div class="decision-label">▸ Cuentas externas necesarias (todas tienen plan gratuito)</div>
           <div class="decision-text">
             <strong style="color:var(--blue-glow);">Supabase</strong> — base de datos + auth + realtime → supabase.com<br>
-            <strong style="color:var(--blue-glow);">Groq</strong> — LLM llama-3.3-70b (gratis con rate limit) → console.groq.com<br>
+            <strong style="color:var(--blue-glow);">DeepSeek</strong> — LLM deepseek-chat (API OpenAI-compatible, muy bajo costo) → platform.deepseek.com<br>
             <strong style="color:var(--blue-glow);">Voyage AI</strong> — embeddings + reranking → voyageai.com<br>
             <strong style="color:var(--blue-glow);">Upstash</strong> — Redis serverless para rate limiting → upstash.com<br>
             <strong style="color:var(--blue-glow);">Vercel</strong> (solo para deploy) — vercel.com
@@ -3417,19 +3624,19 @@ npm install</pre>
           <pre>create extension if not exists vector;</pre>
         </div>
 
-        <div class="step-heading" style="margin-top:20px;"><span class="step-tag">3.3</span> Vincular y aplicar las 12 migraciones</div>
+        <div class="step-heading" style="margin-top:20px;"><span class="step-tag">3.3</span> Vincular y aplicar las 13 migraciones</div>
         <div class="code-wrap">
           <div class="code-bar"><div class="code-dots"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div></div><span class="code-filename">Terminal</span><button class="copy-btn" onclick="copyCode(this)">COPY</button></div>
           <pre><span class="cmt"># Vincular al proyecto (obtén el project-ref en Settings → General)</span>
 npx supabase link --project-ref &lt;tu-project-ref&gt;
 
-<span class="cmt"># Aplicar las 12 migraciones en orden</span>
+<span class="cmt"># Aplicar las 13 migraciones en orden</span>
 npx supabase db push</pre>
         </div>
         <div class="trap" style="margin-top:12px;">
           <div class="trap-icon">⚠️</div>
           <div class="trap-content">
-            <div class="trap-who">Verificar que se aplicaron las 12 migraciones</div>
+            <div class="trap-who">Verificar que se aplicaron las 13 migraciones</div>
             <div class="trap-text">En Supabase Dashboard → Table Editor debes ver las tablas: <code>profiles</code>, <code>tasks</code>, <code>task_embeddings</code>, <code>projects</code>, <code>project_phases</code>, <code>project_members</code>, <code>chat_sessions</code>, <code>messages</code>, <code>comments</code>, <code>invitations</code>. Si alguna falta, revisa la salida del <code>db push</code>.</div>
           </div>
         </div>
@@ -3453,10 +3660,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...          <span class="cmt"># NUNCA expongas esta clave</span>
 
 <span class="cmt"># ── IA ───────────────────────────────────────────────────────────</span>
-GROQ_API_KEY=gsk_...                      <span class="cmt"># console.groq.com → API Keys</span>
+DEEPSEEK_API_KEY=sk-...                   <span class="cmt"># platform.deepseek.com → API Keys</span>
 VOYAGE_API_KEY=pa-...                     <span class="cmt"># voyageai.com → Dashboard → API Keys</span>
-ANTHROPIC_API_KEY=sk-ant-...              <span class="cmt"># opcional — fallback Haiku si Groq cae</span>
-CHAT_PROVIDER=groq                        <span class="cmt"># 'groq' | 'ollama'</span>
+ANTHROPIC_API_KEY=sk-ant-...              <span class="cmt"># opcional — fallback Haiku si DeepSeek cae</span>
+CHAT_PROVIDER=deepseek                    <span class="cmt"># 'deepseek' | 'groq' | 'ollama'</span>
+GROQ_API_KEY=gsk_...                      <span class="cmt"># opcional — solo si CHAT_PROVIDER=groq</span>
 
 <span class="cmt"># ── RATE LIMITING (Upstash Redis) ────────────────────────────────</span>
 UPSTASH_REDIS_REST_URL=https://....upstash.io
@@ -3482,7 +3690,7 @@ NEXT_PUBLIC_SENTRY_DSN=                   <span class="cmt"># observabilidad en 
         <div class="decision-box" style="margin-top:12px;">
           <div class="decision-label">▸ Dónde obtener cada clave externa</div>
           <div class="decision-text">
-            <strong style="color:var(--blue-glow);">Groq:</strong> console.groq.com → API Keys → Create API Key<br>
+            <strong style="color:var(--blue-glow);">DeepSeek:</strong> platform.deepseek.com → API Keys → Create API Key<br>
             <strong style="color:var(--blue-glow);">Voyage AI:</strong> dash.voyageai.com → API Keys<br>
             <strong style="color:var(--blue-glow);">Upstash:</strong> console.upstash.com → Create Database (Redis) → REST URL + Token<br>
             <strong style="color:var(--blue-glow);">Resend:</strong> resend.com → API Keys (solo si quieres emails de invitación)
@@ -3519,7 +3727,7 @@ NEXT_PUBLIC_SENTRY_DSN=                   <span class="cmt"># observabilidad en 
           <div class="trap-icon">⚠️</div>
           <div class="trap-content">
             <div class="trap-who">Si el chat responde sin contexto de tareas</div>
-            <div class="trap-text">La función SQL <code>search_tasks_by_embedding</code> probablemente no coincide con la firma esperada. Verifica que las 12 migraciones se aplicaron en orden — especialmente <code>011_fix_search_signature.sql</code>. Si el error persiste, ejecuta esa migración manualmente en el SQL Editor.</div>
+            <div class="trap-text">La función SQL <code>search_tasks_by_embedding</code> probablemente no coincide con la firma esperada. Verifica que las 13 migraciones se aplicaron en orden — especialmente <code>011_fix_search_signature.sql</code>. Si el error persiste, ejecuta esa migración manualmente en el SQL Editor.</div>
           </div>
         </div>
       </div>
@@ -3543,7 +3751,7 @@ NEXT_PUBLIC_SENTRY_DSN=                   <span class="cmt"># observabilidad en 
             <tr><td>Fechas del proyecto demo</td><td>Supabase SQL Editor</td><td><code>UPDATE projects SET start_date='...', delivery_date='...' WHERE name='...'</code></td></tr>
             <tr><td>Fechas de tareas demo</td><td>Supabase SQL Editor</td><td>Actualizar <code>due_date</code> en las tareas para que correspondan a tu cronograma</td></tr>
             <tr><td>Fases del proyecto</td><td><code>supabase/migrations/005_projects.sql</code></td><td>Editar el <code>cross join (values ...)</code> con tus propias fases y conteos</td></tr>
-            <tr><td>Proveedores de IA</td><td><code>.env.local</code></td><td>Cambiar <code>CHAT_PROVIDER=groq</code> a <code>ollama</code> para pruebas locales sin costo</td></tr>
+            <tr><td>Proveedores de IA</td><td><code>.env.local</code></td><td>Cambiar <code>CHAT_PROVIDER=deepseek</code> a <code>groq</code> u <code>ollama</code> (local sin costo)</td></tr>
           </tbody>
         </table>
 
@@ -3591,7 +3799,7 @@ vercel env pull .env.local   <span class="cmt"># si ya están en Vercel</span>
           <div class="decision-text" style="font-family:var(--font-mono);font-size:12px;line-height:2;">
             <code>VERCEL_TOKEN</code> · <code>VERCEL_ORG_ID</code> · <code>VERCEL_PROJECT_ID</code><br>
             <code>NEXT_PUBLIC_SUPABASE_URL</code> · <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> · <code>SUPABASE_SERVICE_ROLE_KEY</code><br>
-            <code>GROQ_API_KEY</code> · <code>VOYAGE_API_KEY</code> · <code>EMBED_INTERNAL_SECRET</code><br>
+            <code>DEEPSEEK_API_KEY</code> · <code>VOYAGE_API_KEY</code> · <code>EMBED_INTERNAL_SECRET</code><br>
             <code>UPSTASH_REDIS_REST_URL</code> · <code>UPSTASH_REDIS_REST_TOKEN</code><br>
             <code>TEST_USER_EMAIL</code> · <code>TEST_USER_PASSWORD</code> <span style="color:var(--slate-400);">(cuenta real en Supabase para E2E)</span><br>
             <code>NEXT_PUBLIC_SENTRY_DSN</code> · <code>SENTRY_ORG</code> · <code>SENTRY_PROJECT</code> · <code>SENTRY_AUTH_TOKEN</code> <span style="color:var(--slate-400);">(opcionales)</span>
@@ -3625,9 +3833,12 @@ vercel env pull .env.local   <span class="cmt"># si ya están en Vercel</span>
             <tr><td><code>PGRST200: relationship not found</code></td><td>FK faltante, suele pasar con backups parciales</td><td><code>NOTIFY pgrst, 'reload schema'</code> en SQL Editor. Si persiste, agregar el FK manualmente.</td></tr>
             <tr><td>Chat no hace streaming, pantalla en blanco</td><td><code>NEXT_PUBLIC_APP_URL</code> incorrecto o con barra final</td><td>Verificar que sea exactamente <code>http://localhost:3000</code> sin <code>/</code> al final</td></tr>
             <tr><td>Embeddings no se generan al crear tareas</td><td><code>EMBED_INTERNAL_SECRET</code> distinto entre firmante y verificador</td><td>Usar el mismo valor en <code>.env.local</code> y en Vercel. HMAC tiene ventana de 5 min.</td></tr>
-            <tr><td>Rate limit 429 en el chat en dev</td><td>Upstash no configurado → Redis connection falla</td><td>Verificar <code>UPSTASH_REDIS_REST_URL</code> y <code>TOKEN</code>. En dev local se puede usar un DB de free tier.</td></tr>
+            <tr><td>Warning "[ratelimit] Upstash no disponible" en logs</td><td>Instancia de Upstash eliminada o inaccesible — el rate limit hace fail-open y deja pasar sin límite</td><td>Crear nueva DB en console.upstash.com y actualizar <code>UPSTASH_REDIS_REST_URL</code> + <code>TOKEN</code>. La app sigue funcionando mientras tanto.</td></tr>
             <tr><td>Analytics muestra "0 días restantes"</td><td><code>delivery_date</code> del proyecto ya pasó</td><td><code>UPDATE projects SET delivery_date='YYYY-MM-DD' WHERE name='...'</code> en SQL Editor</td></tr>
             <tr><td><code>cookies() should be awaited</code></td><td>Olvidaste <code>await</code> en <code>createClient()</code></td><td>Siempre <code>const supabase = await createClient()</code> en Server Components y Server Actions</td></tr>
+            <tr><td><code>42883: uuid_generate_v4() does not exist</code> al aplicar migraciones</td><td>Extensión <code>uuid-ossp</code> no disponible en el proyecto Supabase nuevo</td><td>Las migraciones ya usan <code>gen_random_uuid()</code> (nativa). Si un backup viejo la referencia, reemplazarla igual.</td></tr>
+            <tr><td>"This page couldn't load" al primer acceso del día</td><td>Supabase free-tier pausado por inactividad; tarda en despertar</td><td>Recargar la página (el middleware tiene timeout de 5s y redirige a /login). Para eliminarlo de raíz: plan pago de Supabase.</td></tr>
+            <tr><td>Login/E2E con "Credenciales inválidas" siendo correctas</td><td>Proyecto Supabase pausado — Auth no responde</td><td>Supabase Dashboard → Restore project → esperar a que Auth/Database/Realtime estén activos antes de tocar código o secrets</td></tr>
           </tbody>
         </table>
       </div>
@@ -3742,6 +3953,11 @@ window.addEventListener('scroll', () => {
 function togglePhase(id) {
   const el = document.getElementById(id)
   if (!el) return
+  // Si la fase vive en un tab oculto (ej. nav lateral desde "¿Qué hace?"), activarlo primero
+  const tab = el.closest('.tab-content')
+  if (tab && !tab.classList.contains('active')) {
+    switchTab(tab.id.replace('tab-', ''))
+  }
   const wasOpen = el.classList.contains('open')
   el.classList.toggle('open')
   if (!wasOpen) {
@@ -3749,8 +3965,8 @@ function togglePhase(id) {
   }
 }
 
-// Open first phase on load
-setTimeout(() => togglePhase('f0'), 500)
+// Dejar la primera fase abierta (sin cambiar de tab ni hacer scroll)
+document.getElementById('f0')?.classList.add('open')
 
 // ── COPY CODE ─────────────────────────────────────────────
 function copyCode(btn) {
@@ -3777,9 +3993,8 @@ function switchTab(id) {
   document.getElementById('tab-' + id).classList.add('active')
   document.querySelector('[data-tab="' + id + '"]').classList.add('active')
 }
-// Activate first tab on load
-document.querySelector('.tab-btn').classList.add('active')
-document.querySelector('.tab-content').classList.add('active')
+// Activate "¿Qué hace?" tab on load
+switchTab('features')
 
 // ── DIAGRAM TOGGLE ────────────────────────────────────────
 function toggleDiag(id) {
@@ -3849,12 +4064,12 @@ function restoreModelPanel() {
   document.getElementById('model-panel').innerHTML = `
     <div class="model-info-title">🤖 Modelos de IA — TaskFlow v3</div>
     <div class="model-row">
-      <span class="model-badge">GROQ</span>
-      <div class="model-desc"><strong style="color:var(--blue-ice);">llama-3.3-70b-versatile</strong> — LLM principal. Tool calling paralelo, streaming SSE, context 128k. Latencia media: ~800ms primer token.</div>
+      <span class="model-badge">DEEPSEEK</span>
+      <div class="model-desc"><strong style="color:var(--blue-ice);">deepseek-chat</strong> — LLM principal (API OpenAI-compatible; el alias resuelve al modelo vigente). Tool calling, streaming SSE. Alternativas vía <code style="font-size:10px;background:rgba(99,102,241,0.12);color:#a5b4fc;padding:1px 5px;border-radius:3px;">CHAT_PROVIDER</code>: groq | ollama.</div>
     </div>
     <div class="model-row">
       <span class="model-badge">FALLBACK</span>
-      <div class="model-desc"><strong style="color:var(--blue-ice);">Claude Haiku 4.5</strong> — Activado solo en el <strong style="color:var(--blue-ice);">turno 2</strong> si Groq falla al generar la respuesta final post-tool. El turno 1 (detección de tool calls) no tiene fallback — si Groq cae allí el stream emite <code style="font-size:10px;background:rgba(99,102,241,0.12);color:#a5b4fc;padding:1px 5px;border-radius:3px;">{ type: 'error' }</code>. Cobertura asimétrica.</div>
+      <div class="model-desc"><strong style="color:var(--blue-ice);">Claude Haiku 4.5</strong> — Activado solo en el <strong style="color:var(--blue-ice);">turno 2</strong> si DeepSeek falla al generar la respuesta final post-tool. El turno 1 (detección de tool calls) no tiene fallback — si DeepSeek cae allí el stream emite <code style="font-size:10px;background:rgba(99,102,241,0.12);color:#a5b4fc;padding:1px 5px;border-radius:3px;">{ type: 'error' }</code>. Cobertura asimétrica.</div>
     </div>
     <div class="model-row">
       <span class="model-badge">EMBED</span>

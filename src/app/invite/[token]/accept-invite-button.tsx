@@ -26,8 +26,8 @@ export function AcceptInviteButton({ token }: { token: string }) {
       onClick={handleAccept}
       disabled={isPending}
       className={cn(
-        'mt-4 w-full py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium',
-        'hover:bg-indigo-700 transition-colors',
+        'mt-4 h-10 w-full rounded-[8px] bg-primary text-sm font-semibold text-primary-foreground shadow-sm',
+        'hover:bg-primary/90',
         'disabled:opacity-60 disabled:cursor-not-allowed'
       )}
     >

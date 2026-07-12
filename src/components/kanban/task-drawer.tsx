@@ -17,9 +17,9 @@ interface TaskDrawerProps {
 }
 
 const PRIORITY_CONFIG = {
-  low:    { label: 'Baja',  class: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
-  medium: { label: 'Media', class: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' },
-  high:   { label: 'Alta',  class: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+  low:    { label: 'Baja',  class: 'border-slate-400/20 bg-slate-500/10 text-slate-600 dark:text-slate-300' },
+  medium: { label: 'Media', class: 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300' },
+  high:   { label: 'Alta',  class: 'border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-300' },
 }
 
 const STATUS_LABELS = {
@@ -92,24 +92,24 @@ export function TaskDrawer({ task, members, currentUserId, onClose }: TaskDrawer
       {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/20 md:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[2px]"
           onClick={onClose}
         />
       )}
 
       {/* Drawer panel */}
       <aside className={cn(
-        'fixed top-0 right-0 z-50 h-full w-full max-w-sm',
-        'bg-background border-l border-border/60 shadow-xl',
-        'flex flex-col transition-transform duration-300 ease-in-out',
+        'fixed right-0 top-0 z-50 h-full w-full max-w-[420px]',
+        'material-panel border-l border-border/70 shadow-2xl',
+        'flex flex-col transition-transform duration-300 ease-[cubic-bezier(.16,1,.3,1)]',
         isOpen ? 'translate-x-0' : 'translate-x-full'
       )}>
         {task && (
           <>
             {/* Header */}
-            <div className="flex items-start justify-between gap-3 px-4 py-4 border-b border-border/50">
+            <div className="flex items-start justify-between gap-3 border-b border-border/60 px-5 py-5">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold leading-snug line-clamp-2">
+                <p className="line-clamp-2 text-sm font-semibold leading-snug">
                   {task.title}
                 </p>
                 <span className="text-xs text-muted-foreground mt-0.5 block">
@@ -118,7 +118,7 @@ export function TaskDrawer({ task, members, currentUserId, onClose }: TaskDrawer
               </div>
               <button
                 onClick={onClose}
-                className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[7px] text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <X size={15} />
               </button>
@@ -127,10 +127,10 @@ export function TaskDrawer({ task, members, currentUserId, onClose }: TaskDrawer
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto">
               {/* Meta section */}
-              <div className="px-4 py-3 flex flex-col gap-3 border-b border-border/40">
+              <div className="flex flex-col gap-4 border-b border-border/50 px-5 py-4">
                 <div className="flex items-center gap-2 flex-wrap">
                   {priority && (
-                    <Badge variant="outline" className={cn('text-xs px-2 py-0', priority.class)}>
+                    <Badge variant="outline" className={cn('h-5 rounded-full px-2 text-[9px] font-semibold', priority.class)}>
                       {priority.label}
                     </Badge>
                   )}
@@ -163,7 +163,7 @@ export function TaskDrawer({ task, members, currentUserId, onClose }: TaskDrawer
               </div>
 
               {/* Comments section */}
-              <div className="px-4 py-3">
+              <div className="px-5 py-4">
                 <div className="flex items-center gap-1.5 mb-3">
                   <MessageSquare size={13} className="text-muted-foreground" />
                   <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -177,7 +177,7 @@ export function TaskDrawer({ task, members, currentUserId, onClose }: TaskDrawer
                 {isLoading ? (
                   <div className="flex flex-col gap-2">
                     {[1, 2].map(i => (
-                      <div key={i} className="h-12 rounded-lg bg-muted/50 animate-pulse" />
+                      <div key={i} className="skeleton-shimmer h-12 rounded-[8px]" />
                     ))}
                   </div>
                 ) : comments.length === 0 ? (
@@ -230,7 +230,7 @@ export function TaskDrawer({ task, members, currentUserId, onClose }: TaskDrawer
             </div>
 
             {/* Comment input */}
-            <div className="px-4 py-3 border-t border-border/50">
+            <div className="border-t border-border/60 bg-card/60 px-4 py-3">
               <form onSubmit={handleSubmit} className="flex items-end gap-2">
                 <textarea
                   ref={inputRef}
@@ -247,8 +247,8 @@ export function TaskDrawer({ task, members, currentUserId, onClose }: TaskDrawer
                   maxLength={2000}
                   disabled={isPending}
                   className={cn(
-                    'flex-1 px-3 py-2 text-xs rounded-lg border border-border/60 bg-background resize-none',
-                    'focus:outline-none focus:ring-1 focus:ring-indigo-500/50',
+                    'flex-1 resize-none rounded-[8px] border border-border/70 bg-background px-3 py-2 text-xs',
+                    'focus:outline-none focus:ring-2 focus:ring-primary/20',
                     'disabled:opacity-50 placeholder:text-muted-foreground/60'
                   )}
                 />
@@ -256,8 +256,8 @@ export function TaskDrawer({ task, members, currentUserId, onClose }: TaskDrawer
                   type="submit"
                   disabled={!newComment.trim() || isPending}
                   className={cn(
-                    'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
-                    'bg-indigo-600 text-white hover:bg-indigo-700 transition-colors',
+                    'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[7px]',
+                    'bg-primary text-primary-foreground hover:bg-primary/90',
                     'disabled:opacity-50 disabled:cursor-not-allowed'
                   )}
                 >

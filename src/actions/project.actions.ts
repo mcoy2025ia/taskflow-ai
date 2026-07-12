@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { getAuthUser } from '@/lib/supabase/get-user'
 import { createClient } from '@/lib/supabase/server'
+import { env } from '@/lib/env'
 
 export interface ProjectSummary {
   id: string
@@ -528,6 +529,10 @@ export async function deleteAllTasks(
 ): Promise<ActionResult<void>> {
   const user = await getAuthUser()
   if (!user) return { success: false, error: 'No autenticado' }
+
+  if (env.DEMO_EMAIL && user.email === env.DEMO_EMAIL) {
+    return { success: false, error: 'La cuenta demo no puede borrar tareas. Crea tu propia cuenta para gestionar tu tablero.' }
+  }
 
   const supabase = await createClient()
 

@@ -1,123 +1,68 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { UploadCloud, Download, Sparkles, FileText, Loader2, CircleCheck, TriangleAlert, ArrowRight, Wand2, Building2, Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 import { importTasksCSV, generateTasksCSV, type ImportResult } from '@/actions/import.actions'
+import { DEFAULT_GENERATE_TASKS_PROMPT } from '@/lib/ai/generate-tasks-prompt'
+import type { ProjectMember } from '@/types/app.types'
 
-// ── Design tokens (same as analytics page) ───────────────────────────────────
-const T = {
-  bg2:      '#0b0e1a',
-  surface:  '#131729',
-  surface2: '#1a1f38',
-  border:   'rgba(255,255,255,0.07)',
-  border2:  'rgba(255,255,255,0.12)',
-  blue:     '#1d70e8',
-  blueLt:   '#4d9bff',
-  text:     'rgba(240,244,255,0.88)',
-  textDim:  'rgba(240,244,255,0.45)',
-  textMute: 'rgba(240,244,255,0.28)',
-  green:    '#22c55e',
-  greenLt:  '#4ade80',
-  amber:    '#f59e0b',
-  amberLt:  '#fbbf24',
-  red:      '#ef4444',
-  redLt:    '#f87171',
-  mono:     "'DM Mono', 'SF Mono', ui-monospace, monospace",
-  font:     "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-}
-
-// ── CSV fields structure ──────────────────────────────────────────────────────
 const FIELDS = [
-  {
-    name: 'title',
-    type: 'texto',
-    desc: 'Nombre de la tarea',
-    example: 'ETL Bronze Layer',
-    required: true,
-    note: 'Máx. 200 caracteres',
-  },
-  {
-    name: 'description',
-    type: 'texto',
-    desc: 'Descripción detallada',
-    example: 'Pipeline de ingesta cruda con hash de deduplicación',
-    required: false,
-    note: 'Máx. 2 000 caracteres',
-  },
-  {
-    name: 'status',
-    type: 'enum',
-    desc: 'Estado de la tarea',
-    example: 'todo',
-    required: false,
-    note: 'todo · in_progress · done  (default: todo)',
-  },
-  {
-    name: 'priority',
-    type: 'enum',
-    desc: 'Prioridad',
-    example: 'high',
-    required: false,
-    note: 'low · medium · high  (default: medium)',
-  },
-  {
-    name: 'due_date',
-    type: 'fecha',
-    desc: 'Fecha límite',
-    example: '2026-05-15',
-    required: false,
-    note: 'YYYY-MM-DD o DD/MM/YYYY',
-  },
+  { name: 'title', desc: 'Nombre de la tarea', example: 'Preparar informe', required: true },
+  { name: 'description', desc: 'Detalle opcional', example: 'Resumen para dirección', required: false },
+  { name: 'status', desc: 'Estado', example: 'todo', required: false },
+  { name: 'priority', desc: 'Prioridad', example: 'high', required: false },
+  { name: 'due_date', desc: 'Fecha límite', example: '2026-05-15', required: false },
 ]
 
-// ── Sample CSV content (mirrors public/template-tareas.csv) ──────────────────
 const TEMPLATE_CSV = `title,description,status,priority,due_date
-Setup infraestructura base,Configurar repositorio Git y Docker Compose con PostgreSQL y MLflow,todo,high,2026-04-05
-Descarga y validación dataset Olist,Descargar los 9 archivos CSV de Olist y ejecutar DQ report inicial,todo,high,2026-04-10
-ETL Bronze Layer,Pipeline de ingesta cruda con particionado por fecha y hash de deduplicación,in_progress,high,2026-04-18
-ETL Silver Layer,Limpieza y normalización de tipos correctos y métricas derivadas,todo,medium,2026-04-25
-Modelado Star Schema Gold,Diseñar y poblar fact_orders y dimensiones en PostgreSQL,todo,medium,2026-04-30
-Feature Engineering RFM,Calcular RFM y lag features de 30-60-90 días para segmentación de clientes,todo,high,2026-05-05
-Modelo XGBoost Churn,Entrenar XGBoost con Optuna para predicción de churn en 90 días,todo,high,2026-05-10
-Dashboard Streamlit,Implementar dashboard con mapa coroplético e indicadores year-over-year,todo,medium,2026-05-15
-FastAPI y Redis Cache,Exponer endpoints de predicción con caché Redis y rate limiting,todo,medium,2026-05-20
-Pruebas de carga Locust,Ejecutar suite de pruebas de carga y documentar resultados en MkDocs,todo,low,2026-05-24
+Setup infraestructura base,Configurar repositorio y entorno,todo,high,2026-04-05
+Validar dataset,Ejecutar reporte de calidad,in_progress,high,2026-04-10
+Preparar dashboard,Construir indicadores principales,todo,medium,2026-04-18
+Documentar entrega,Crear guía de operación,todo,low,2026-04-25
 `
 
-// ── CSV parser ────────────────────────────────────────────────────────────────
-function parseCSV(raw: string): { headers: string[]; rows: Record<string, string>[] } {
-  // Normalizar line endings, quitar BOM
-  const text = raw.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-  const lines = text.split('\n').filter(l => l.trim() !== '')
-  if (lines.length < 2) return { headers: [], rows: [] }
+function buildContextBlock(company: string, area: string, participants: string[]): string {
+  return [
+    'CONTEXTO DEL PROYECTO (respétalo al redactar títulos y descripciones):',
+    `- Empresa: ${company.trim() || 'No especificada'}`,
+    `- Proyecto / Área para la que es: ${area.trim() || 'No especificado'}`,
+    `- Personas que van a participar: ${participants.length ? participants.join(', ') : 'No especificadas'}`,
+    'Redacta las tareas como si realmente pertenecieran a este proyecto y equipo.',
+  ].join('\n')
+}
 
+function parseCSV(raw: string): { headers: string[]; rows: Record<string, string>[] } {
+  const text = raw.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+  const lines = text.split('\n').filter(line => line.trim() !== '')
+  if (lines.length < 2) return { headers: [], rows: [] }
   const parseRow = (line: string): string[] => {
     const cells: string[] = []
-    let cur = '', inQ = false
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i]
-      if (ch === '"') {
-        if (inQ && line[i + 1] === '"') { cur += '"'; i++ }
-        else inQ = !inQ
-      } else if (ch === ',' && !inQ) {
-        cells.push(cur.trim()); cur = ''
-      } else {
-        cur += ch
-      }
+    let current = '', quoted = false
+    for (let index = 0; index < line.length; index++) {
+      const character = line[index]
+      if (character === '"') {
+        if (quoted && line[index + 1] === '"') { current += '"'; index++ }
+        else quoted = !quoted
+      } else if (character === ',' && !quoted) { cells.push(current.trim()); current = '' }
+      else current += character
     }
-    cells.push(cur.trim())
+    cells.push(current.trim())
     return cells
   }
-
-  const headers = parseRow(lines[0]).map(h => h.replace(/^"|"$/g, '').trim())
+  const headers = parseRow(lines[0]).map(header => header.replace(/^"|"$/g, '').trim())
   const rows = lines.slice(1).map(line => {
-    const vals = parseRow(line)
-    return Object.fromEntries(headers.map((h, i) => [h, (vals[i] ?? '').replace(/^"|"$/g, '').trim()]))
+    const values = parseRow(line)
+    return Object.fromEntries(headers.map((header, index) => [header, (values[index] ?? '').replace(/^"|"$/g, '').trim()]))
   })
   return { headers, rows }
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 type Phase =
   | { id: 'idle' }
   | { id: 'parsed'; fileName: string; headers: string[]; rows: Record<string, string>[] }
@@ -125,461 +70,203 @@ type Phase =
   | { id: 'done'; result: ImportResult }
   | { id: 'error'; message: string }
 
-// ── CsvImport component ───────────────────────────────────────────────────────
-export function CsvImport({
-  projectId,
-  projectName,
-}: {
+interface CsvImportProps {
   projectId?: string | null
   projectName?: string | null
-}) {
+  company?: string | null
+  department?: string | null
+  members?: ProjectMember[]
+}
+
+export function CsvImport({ projectId, projectName, company: companyProp, department, members = [] }: CsvImportProps) {
   const [phase, setPhase] = useState<Phase>({ id: 'idle' })
   const [dragOver, setDragOver] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [promptOpen, setPromptOpen] = useState(false)
+  const [promptValue, setPromptValue] = useState(DEFAULT_GENERATE_TASKS_PROMPT)
+  const [company, setCompany] = useState(companyProp ?? '')
+  const [area, setArea] = useState(projectName ?? department ?? '')
+  const [participantIds, setParticipantIds] = useState<string[]>(() => members.map(m => m.userId))
   const fileRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
-  // ── Template download ──────────────────────────────────────────────────────
-  function downloadTemplate() {
-    const blob = new Blob([TEMPLATE_CSV], { type: 'text/csv;charset=utf-8' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href = url
-    a.download = 'template-tareas.csv'
-    document.body.appendChild(a); a.click(); document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+  const finalPrompt = useMemo(() => {
+    const participantNames = members
+      .filter(m => participantIds.includes(m.userId))
+      .map(m => (m.role ? `${m.name} (${m.role})` : m.name))
+    return `${buildContextBlock(company, area, participantNames)}\n\n${promptValue}`
+  }, [company, area, participantIds, members, promptValue])
+
+  function toggleParticipant(userId: string) {
+    setParticipantIds(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId])
   }
 
-  // ── File handling ──────────────────────────────────────────────────────────
+  function downloadTemplate() {
+    const url = URL.createObjectURL(new Blob([TEMPLATE_CSV], { type: 'text/csv;charset=utf-8' }))
+    const anchor = document.createElement('a')
+    anchor.href = url; anchor.download = 'template-tareas.csv'
+    document.body.appendChild(anchor); anchor.click(); document.body.removeChild(anchor); URL.revokeObjectURL(url)
+  }
+
   const processFile = useCallback((file: File) => {
-    if (!file.name.endsWith('.csv') && file.type !== 'text/csv' && !file.type.includes('csv')) {
-      setPhase({ id: 'error', message: 'Por favor selecciona un archivo .csv' })
-      return
-    }
+    if (!file.name.endsWith('.csv') && file.type !== 'text/csv' && !file.type.includes('csv')) { setPhase({ id: 'error', message: 'Selecciona un archivo .csv válido.' }); return }
     const reader = new FileReader()
-    reader.onload = e => {
-      const text = e.target?.result as string
-      const { headers, rows } = parseCSV(text)
-      if (rows.length === 0) {
-        setPhase({ id: 'error', message: 'El archivo no contiene filas de datos' })
-        return
-      }
-      if (!headers.includes('title')) {
-        setPhase({ id: 'error', message: 'Columna "title" no encontrada. Revisa que el CSV tenga encabezados.' })
-        return
-      }
+    reader.onload = event => {
+      const { headers, rows } = parseCSV(event.target?.result as string)
+      if (!rows.length) { setPhase({ id: 'error', message: 'El archivo no contiene filas de datos.' }); return }
+      if (!headers.includes('title')) { setPhase({ id: 'error', message: 'No encontramos la columna obligatoria "title".' }); return }
       setPhase({ id: 'parsed', fileName: file.name, headers, rows })
     }
-    reader.onerror = () => setPhase({ id: 'error', message: 'Error al leer el archivo' })
+    reader.onerror = () => setPhase({ id: 'error', message: 'No pudimos leer el archivo.' })
     reader.readAsText(file, 'UTF-8')
   }, [])
 
-  function onFileInput(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]
-    if (f) processFile(f)
-    e.target.value = ''
-  }
+  function onFileInput(event: React.ChangeEvent<HTMLInputElement>) { const file = event.target.files?.[0]; if (file) processFile(file); event.target.value = '' }
+  function onDrop(event: React.DragEvent) { event.preventDefault(); setDragOver(false); const file = event.dataTransfer.files?.[0]; if (file) processFile(file) }
 
-  function onDrop(e: React.DragEvent) {
-    e.preventDefault(); setDragOver(false)
-    const f = e.dataTransfer.files?.[0]
-    if (f) processFile(f)
-  }
-
-  // ── AI CSV generation ──────────────────────────────────────────────────────
   async function handleGenerate() {
-    setIsGenerating(true)
-    setPhase({ id: 'idle' })
-    const result = await generateTasksCSV()
+    setPromptOpen(false)
+    setIsGenerating(true); setPhase({ id: 'idle' })
+    const result = await generateTasksCSV(finalPrompt)
     setIsGenerating(false)
-    if (!result.success) {
-      setPhase({ id: 'error', message: result.error })
-      return
-    }
+    if (!result.success) { setPhase({ id: 'error', message: result.error }); return }
     const { headers, rows } = parseCSV(result.csv)
-    if (rows.length === 0) {
-      setPhase({ id: 'error', message: 'El modelo generó un CSV vacío. Intenta de nuevo.' })
-      return
-    }
-    setPhase({ id: 'parsed', fileName: `medallion-ml-${new Date().toISOString().slice(0,10)}.csv`, headers, rows })
+    if (!rows.length) { setPhase({ id: 'error', message: 'La IA generó un CSV vacío. Intenta de nuevo.' }); return }
+    setPhase({ id: 'parsed', fileName: `tareas-ia-${new Date().toISOString().slice(0, 10)}.csv`, headers, rows })
   }
 
-  // ── Import ─────────────────────────────────────────────────────────────────
   async function handleImport() {
     if (phase.id !== 'parsed') return
+    const rows = phase.rows
     setPhase({ id: 'importing' })
-    const result = await importTasksCSV(projectId, phase.rows)
-    if (!result.success) {
-      setPhase({ id: 'error', message: result.error })
-      return
-    }
+    const result = await importTasksCSV(projectId, rows)
+    if (!result.success) { setPhase({ id: 'error', message: result.error }); return }
     setPhase({ id: 'done', result: result.data })
-    if (result.data.inserted > 0) {
-      router.refresh()
-      // Notify analytics hook to re-fetch (useEffect can't detect router.refresh)
-      window.dispatchEvent(new CustomEvent('taskflow:board_update'))
-    }
+    if (result.data.inserted > 0) { router.refresh(); window.dispatchEvent(new CustomEvent('taskflow:board_update')) }
   }
 
-  // ── Render helpers ─────────────────────────────────────────────────────────
-  const card: React.CSSProperties = {
-    background: T.surface, border: `1px solid ${T.border}`,
-    borderRadius: 20, padding: '1.5rem',
-    boxShadow: '0 4px 32px rgba(0,0,0,0.3)',
-  }
-
-  const pill = (color: string, bg: string, border: string): React.CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center',
-    padding: '0.15rem 0.55rem', borderRadius: 999,
-    fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em',
-    background: bg, border: `1px solid ${border}`, color,
-  })
+  const canSelect = phase.id !== 'importing'
+  const parsed = phase.id === 'parsed' ? phase : null
 
   return (
-    <div style={{ fontFamily: T.font, color: T.text, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="mx-auto flex max-w-5xl flex-col gap-5 pb-8">
+      <section className="material-panel rounded-[8px] p-5 sm:p-6">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+          <div className="flex max-w-xl gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] bg-primary/10 text-primary"><FileText size={18} /></div><div><p className="text-sm font-semibold">Empieza con tus tareas</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Importa un CSV en {projectName ?? 'el proyecto activo'} o deja que la IA prepare una base editable.</p></div></div>
+          <div className="flex flex-wrap gap-2"><Button variant="outline" size="sm" onClick={downloadTemplate} className="h-9 gap-2 rounded-[8px] text-xs"><Download size={13} /> Plantilla</Button><Button size="sm" onClick={() => setPromptOpen(true)} disabled={isGenerating} className="h-9 gap-2 rounded-[8px] text-xs">{isGenerating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {isGenerating ? 'Generando...' : 'Generar con IA'}</Button></div>
+        </div>
+      </section>
 
-      {/* ── Intro card ── */}
-      <div style={{ ...card, border: `1px solid rgba(29,112,232,0.2)`, background: 'rgba(29,112,232,0.05)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '2rem' }}>📥</div>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f0f4ff', marginBottom: 4 }}>
-              Importar tareas desde CSV
-            </h3>
-            <p style={{ fontSize: '0.82rem', color: T.textDim, lineHeight: 1.7 }}>
-              Sube un archivo <code style={{ fontFamily: T.mono, color: T.blueLt, fontSize: '0.78rem' }}>.csv</code> con
-              tus tareas y las insertaremos automáticamente en
-              {projectName ? <b style={{ color: '#f0f4ff' }}> {projectName}</b> : ' el proyecto activo'}.
-              Máximo <b style={{ color: '#f0f4ff' }}>500 filas</b> por importación.
-            </p>
+      <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
+        <div
+          onClick={() => { if (canSelect) fileRef.current?.click() }}
+          onDragOver={event => { event.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+          className={cn('material-subtle flex min-h-[270px] cursor-pointer flex-col items-center justify-center rounded-[8px] border-2 border-dashed p-6 text-center', dragOver && 'border-primary bg-primary/[0.05]', phase.id === 'error' && 'border-destructive/45 bg-destructive/[0.04]', !canSelect && 'cursor-wait')}
+        >
+          <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onFileInput} />
+          {phase.id === 'idle' && <><div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[8px] bg-card text-primary shadow-sm"><UploadCloud size={21} /></div><p className="text-sm font-semibold">Suelta aquí tu archivo CSV</p><p className="mt-2 max-w-xs text-[11px] leading-relaxed text-muted-foreground">También puedes hacer clic para buscarlo. UTF-8, máximo 500 filas.</p></>}
+          {phase.id === 'parsed' && <><div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[8px] bg-emerald-500/10 text-emerald-600"><CircleCheck size={21} /></div><p className="max-w-full truncate text-sm font-semibold text-emerald-700 dark:text-emerald-300">{phase.fileName}</p><p className="mt-2 text-[11px] text-muted-foreground">{phase.rows.length} tareas listas para revisar</p></>}
+          {phase.id === 'importing' && <><Loader2 size={28} className="mb-4 animate-spin text-primary" /><p className="text-sm font-semibold">Importando tareas...</p><p className="mt-2 text-[11px] text-muted-foreground">Estamos validando cada fila.</p></>}
+          {phase.id === 'done' && <><div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[8px] bg-emerald-500/10 text-emerald-600"><CircleCheck size={22} /></div><p className="text-sm font-semibold">Importación completada</p><p className="mt-2 text-[11px] text-muted-foreground">{phase.result.inserted} tareas agregadas, {phase.result.skipped} omitidas.</p></>}
+          {phase.id === 'error' && <><div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[8px] bg-destructive/10 text-destructive"><TriangleAlert size={21} /></div><p className="text-sm font-semibold text-destructive">Revisa el archivo</p><p className="mt-2 max-w-sm text-[11px] leading-relaxed text-muted-foreground">{phase.message}</p></>}
+        </div>
+
+        <div className="material-panel rounded-[8px] p-4 sm:p-5">
+          <p className="mb-4 text-[10px] font-bold uppercase text-muted-foreground">Estructura esperada</p>
+          <div className="space-y-1">{FIELDS.map(field => <div key={field.name} className="flex items-center gap-3 rounded-[7px] px-2 py-2 hover:bg-muted/50"><code className="w-24 shrink-0 text-[10px] font-semibold text-primary">{field.name}</code><div className="min-w-0 flex-1"><p className="truncate text-[10px] text-foreground">{field.desc}</p><p className="mt-0.5 truncate text-[9px] text-muted-foreground">Ej: {field.example}</p></div><span className={cn('rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase', field.required ? 'bg-red-500/10 text-red-600' : 'bg-muted text-muted-foreground')}>{field.required ? 'Req.' : 'Opc.'}</span></div>)}</div>
+          <div className="mt-4 rounded-[7px] bg-muted/65 p-3"><code className="block overflow-x-auto whitespace-nowrap text-[9px] text-muted-foreground">title,description,status,priority,due_date</code></div>
+        </div>
+      </section>
+
+      <Dialog open={promptOpen} onOpenChange={setPromptOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader className="border-b border-border/60 pb-3">
+            <DialogTitle className="flex items-center gap-2"><Wand2 size={16} className="text-primary" /> Prompt para generar tareas</DialogTitle>
+            <DialogDescription>Confirma para quién son estas tareas y revisa las instrucciones antes de enviarlas a la IA.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase text-muted-foreground"><Building2 size={11} /> Empresa</span>
+              <Input value={company} onChange={event => setCompany(event.target.value)} placeholder="Ej: Sodimac" className="h-8 text-xs" />
+            </label>
+            <label className="block">
+              <span className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase text-muted-foreground">Proyecto / Área</span>
+              <Input value={area} onChange={event => setArea(event.target.value)} placeholder="Ej: Analítica de Mercadeo" className="h-8 text-xs" />
+            </label>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
-            {/* Generar con IA */}
-            <button
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '0.5rem 1rem', borderRadius: 10, border: 'none',
-                background: isGenerating
-                  ? 'rgba(139,92,246,0.4)'
-                  : 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                color: '#fff', fontSize: '0.72rem',
-                fontWeight: 700, cursor: isGenerating ? 'not-allowed' : 'pointer',
-                fontFamily: T.font, whiteSpace: 'nowrap',
-                boxShadow: isGenerating ? 'none' : '0 4px 14px rgba(139,92,246,0.4)',
-                transition: 'opacity 0.2s, transform 0.2s',
-                opacity: isGenerating ? 0.7 : 1,
-              }}
-            >
-              {isGenerating ? (
-                <>
-                  <span style={{ width: 11, height: 11, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', animation: 'mcoySpinA 0.7s linear infinite', display: 'inline-block', flexShrink: 0 }} />
-                  Generando…
-                </>
-              ) : (
-                <>✨ Generar con IA</>
-              )}
-            </button>
-            {/* Descargar plantilla */}
-            <button
-              onClick={downloadTemplate}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '0.5rem 1rem', borderRadius: 10, border: `1px solid ${T.border2}`,
-                background: T.surface2, color: T.text, fontSize: '0.72rem',
-                fontWeight: 600, cursor: 'pointer', fontFamily: T.font,
-                whiteSpace: 'nowrap',
-                transition: 'border-color 0.2s, background 0.2s',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(29,112,232,0.4)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = T.border2 }}
-            >
-              ↓ Descargar plantilla
-            </button>
-          </div>
-        </div>
-      </div>
 
-      {/* ── Field structure ── */}
-      <div style={card}>
-        <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: T.blue, marginBottom: '0.25rem' }}>
-          Estructura
-        </p>
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f0f4ff', marginBottom: '1rem' }}>
-          Campos del CSV
-        </h3>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
-            <thead>
-              <tr>
-                {['Campo', 'Tipo', 'Descripción', 'Ejemplo', 'Notas'].map(h => (
-                  <th key={h} style={{
-                    padding: '0.5rem 0.875rem', textAlign: 'left',
-                    borderBottom: `1px solid ${T.border2}`,
-                    color: T.textDim, fontSize: '0.6rem',
-                    fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-                  }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {FIELDS.map((f, i) => (
-                <tr key={f.name} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                  <td style={{ padding: '0.625rem 0.875rem', borderBottom: `1px solid ${T.border}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <code style={{ fontFamily: T.mono, color: T.blueLt, fontSize: '0.78rem' }}>{f.name}</code>
-                      {f.required
-                        ? <span style={pill(T.redLt, 'rgba(239,68,68,0.12)', 'rgba(239,68,68,0.25)')}>req.</span>
-                        : <span style={pill(T.textMute, 'rgba(255,255,255,0.04)', T.border)}>opc.</span>}
-                    </div>
-                  </td>
-                  <td style={{ padding: '0.625rem 0.875rem', borderBottom: `1px solid ${T.border}`, color: T.amberLt, fontFamily: T.mono, fontSize: '0.72rem' }}>
-                    {f.type}
-                  </td>
-                  <td style={{ padding: '0.625rem 0.875rem', borderBottom: `1px solid ${T.border}`, color: T.textDim }}>
-                    {f.desc}
-                  </td>
-                  <td style={{ padding: '0.625rem 0.875rem', borderBottom: `1px solid ${T.border}` }}>
-                    <code style={{ fontFamily: T.mono, color: T.greenLt, fontSize: '0.72rem' }}>{f.example}</code>
-                  </td>
-                  <td style={{ padding: '0.625rem 0.875rem', borderBottom: `1px solid ${T.border}`, color: T.textMute, fontSize: '0.7rem' }}>
-                    {f.note}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {/* Header preview */}
-        <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: T.bg2, borderRadius: 10, border: `1px solid ${T.border}` }}>
-          <p style={{ fontSize: '0.58rem', color: T.textMute, marginBottom: 4, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Encabezado esperado (primera fila)</p>
-          <code style={{ fontFamily: T.mono, fontSize: '0.72rem', color: T.blueLt }}>
-            title,description,status,priority,due_date
-          </code>
-        </div>
-      </div>
-
-      {/* ── Drop zone ── */}
-      <div
-        onClick={() => { if (phase.id !== 'importing') fileRef.current?.click() }}
-        onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={onDrop}
-        style={{
-          ...card,
-          border: `2px dashed ${dragOver ? T.blue : (phase.id === 'error' ? T.red : T.border2)}`,
-          background: dragOver ? 'rgba(29,112,232,0.06)' : T.surface,
-          cursor: phase.id === 'importing' ? 'not-allowed' : 'pointer',
-          textAlign: 'center', padding: '2.5rem 1.5rem',
-          transition: 'border-color 0.2s, background 0.2s',
-        }}
-      >
-        <input ref={fileRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={onFileInput} />
-
-        {phase.id === 'idle' && (
-          <>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📂</div>
-            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: '#f0f4ff', marginBottom: 4 }}>
-              Arrastra tu CSV aquí o haz clic para seleccionar
-            </p>
-            <p style={{ fontSize: '0.75rem', color: T.textDim }}>
-              Formatos aceptados: .csv · UTF-8 · máx. 500 filas
-            </p>
-          </>
-        )}
-
-        {phase.id === 'parsed' && (
-          <>
-            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
-            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: T.greenLt, marginBottom: 4 }}>
-              {phase.fileName}
-            </p>
-            <p style={{ fontSize: '0.75rem', color: T.textDim }}>
-              {phase.rows.length} fila{phase.rows.length !== 1 ? 's' : ''} detectada{phase.rows.length !== 1 ? 's' : ''} ·{' '}
-              Columnas: <code style={{ fontFamily: T.mono, color: T.blueLt }}>{phase.headers.join(', ')}</code>
-            </p>
-            <p style={{ fontSize: '0.7rem', color: T.textMute, marginTop: 6 }}>Haz clic para cambiar archivo</p>
-          </>
-        )}
-
-        {phase.id === 'importing' && (
-          <>
-            <div style={{ display: 'inline-block', width: 32, height: 32, border: `3px solid rgba(29,112,232,0.3)`, borderTopColor: T.blue, borderRadius: '50%', animation: 'mcoySpinA 0.8s linear infinite', marginBottom: '0.75rem' }} />
-            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: T.blueLt }}>Importando tareas…</p>
-          </>
-        )}
-
-        {phase.id === 'done' && (
-          <>
-            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎉</div>
-            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: T.greenLt, marginBottom: 4 }}>
-              ¡Importación completada!
-            </p>
-            <p style={{ fontSize: '0.75rem', color: T.textDim }}>Haz clic para importar otro archivo</p>
-          </>
-        )}
-
-        {phase.id === 'error' && (
-          <>
-            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚠️</div>
-            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: T.redLt, marginBottom: 4 }}>
-              {phase.message}
-            </p>
-            <p style={{ fontSize: '0.75rem', color: T.textDim }}>Haz clic para intentar de nuevo</p>
-          </>
-        )}
-      </div>
-
-      {/* ── Row preview ── */}
-      {phase.id === 'parsed' && phase.rows.length > 0 && (
-        <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: 8 }}>
+          {members.length > 0 && (
             <div>
-              <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: T.blue, marginBottom: 2 }}>Vista previa</p>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f0f4ff' }}>
-                {phase.rows.length > 10 ? `Primeras 10 de ${phase.rows.length} filas` : `${phase.rows.length} filas a importar`}
-              </h3>
-            </div>
-            <button
-              onClick={handleImport}
-              disabled={phase.id !== 'parsed'}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '0.6rem 1.375rem', borderRadius: 12, border: 'none',
-                background: 'linear-gradient(135deg, #1d70e8, #4d9bff)',
-                color: '#fff', fontSize: '0.8rem', fontWeight: 700,
-                cursor: 'pointer', fontFamily: T.font,
-                boxShadow: '0 4px 20px rgba(29,112,232,0.4)',
-                transition: 'transform 0.2s, box-shadow 0.2s',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 28px rgba(29,112,232,0.5)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = ''; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 20px rgba(29,112,232,0.4)' }}
-            >
-              🚀 Importar {phase.rows.length} tarea{phase.rows.length !== 1 ? 's' : ''} →
-            </button>
-          </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.75rem' }}>
-              <thead>
-                <tr>
-                  <th style={{ padding: '0.4rem 0.75rem', textAlign: 'center', borderBottom: `1px solid ${T.border2}`, color: T.textMute, fontSize: '0.58rem', letterSpacing: '0.1em', textTransform: 'uppercase', width: 40 }}>#</th>
-                  {phase.headers.map(h => (
-                    <th key={h} style={{ padding: '0.4rem 0.75rem', textAlign: 'left', borderBottom: `1px solid ${T.border2}`, color: T.textDim, fontSize: '0.58rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {phase.rows.slice(0, 10).map((row, i) => (
-                  <tr key={i} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                    <td style={{ padding: '0.45rem 0.75rem', borderBottom: `1px solid ${T.border}`, color: T.textMute, fontFamily: T.mono, fontSize: '0.68rem', textAlign: 'center' }}>{i + 2}</td>
-                    {phase.headers.map(h => (
-                      <td key={h} style={{ padding: '0.45rem 0.75rem', borderBottom: `1px solid ${T.border}`, color: T.text, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {h === 'status'   ? <StatusBadge v={row[h]} /> :
-                         h === 'priority' ? <PriorityBadge v={row[h]} /> :
-                         h === 'due_date' ? <span style={{ fontFamily: T.mono, color: T.amberLt, fontSize: '0.72rem' }}>{row[h] || '—'}</span> :
-                         <span title={row[h]}>{row[h] || <span style={{ color: T.textMute }}>—</span>}</span>}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {phase.rows.length > 10 && (
-            <p style={{ fontSize: '0.68rem', color: T.textMute, marginTop: '0.75rem', textAlign: 'center' }}>
-              + {phase.rows.length - 10} filas más (se importarán todas)
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* ── Result ── */}
-      {phase.id === 'done' && (
-        <div style={card}>
-          <p style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: T.blue, marginBottom: '0.25rem' }}>Resultado</p>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#f0f4ff', marginBottom: '1rem' }}>Resumen de importación</h3>
-
-          <div style={{ display: 'flex', gap: '0.875rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-            <div style={{ background: T.bg2, border: `1px solid rgba(34,197,94,0.25)`, borderRadius: 16, padding: '0.875rem 1.25rem', textAlign: 'center', minWidth: 90 }}>
-              <div style={{ fontSize: '2rem', fontWeight: 800, color: T.greenLt, lineHeight: 1 }}>{phase.result.inserted}</div>
-              <div style={{ fontSize: '0.6rem', color: T.textDim, marginTop: 3, letterSpacing: '0.05em' }}>Insertadas</div>
-            </div>
-            <div style={{ background: T.bg2, border: `1px solid rgba(239,68,68,0.25)`, borderRadius: 16, padding: '0.875rem 1.25rem', textAlign: 'center', minWidth: 90 }}>
-              <div style={{ fontSize: '2rem', fontWeight: 800, color: T.redLt, lineHeight: 1 }}>{phase.result.skipped}</div>
-              <div style={{ fontSize: '0.6rem', color: T.textDim, marginTop: 3, letterSpacing: '0.05em' }}>Con errores</div>
-            </div>
-          </div>
-
-          {phase.result.errors.length > 0 && (
-            <div>
-              <p style={{ fontSize: '0.7rem', fontWeight: 700, color: T.amberLt, marginBottom: '0.625rem' }}>
-                ⚠ Filas con problemas:
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                {phase.result.errors.map((e, i) => (
-                  <div key={i} style={{ background: 'rgba(239,68,68,0.06)', border: `1px solid rgba(239,68,68,0.18)`, borderRadius: 8, padding: '0.5rem 0.875rem', display: 'flex', gap: '0.75rem', alignItems: 'flex-start', fontSize: '0.75rem' }}>
-                    <span style={{ fontFamily: T.mono, color: T.amberLt, flexShrink: 0 }}>Fila {e.row}</span>
-                    <span style={{ color: T.redLt, fontFamily: T.mono, fontSize: '0.7rem' }}>{e.field}</span>
-                    <span style={{ color: T.textDim }}>{e.message}</span>
-                  </div>
-                ))}
+              <span className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase text-muted-foreground"><Users size={11} /> Quiénes participan</span>
+              <div className="flex flex-wrap gap-1.5">
+                {members.map(member => {
+                  const checked = participantIds.includes(member.userId)
+                  return (
+                    <button
+                      key={member.userId}
+                      type="button"
+                      onClick={() => toggleParticipant(member.userId)}
+                      className={cn(
+                        'rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
+                        checked ? 'border-primary/40 bg-primary/10 text-primary' : 'border-border/70 bg-muted/40 text-muted-foreground hover:bg-muted'
+                      )}
+                    >
+                      {member.name}{member.role ? ` · ${member.role}` : ''}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
 
-          {phase.result.inserted > 0 && (
-            <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: 'rgba(34,197,94,0.06)', border: `1px solid rgba(34,197,94,0.2)`, borderRadius: 10, fontSize: '0.78rem', color: T.greenLt }}>
-              ✓ Las tareas ya están disponibles en el Tablero Kanban y en la vista de Analítica.
-              Los embeddings vectoriales se generarán en segundo plano para habilitar la búsqueda semántica.
+          <div>
+            <span className="mb-1.5 block text-[10px] font-semibold uppercase text-muted-foreground">Instrucciones de generación</span>
+            <Textarea
+              value={promptValue}
+              onChange={event => setPromptValue(event.target.value)}
+              rows={11}
+              className="font-mono text-[11px] leading-relaxed"
+            />
+            <div className="mt-2 flex items-center justify-between gap-2">
+              {promptValue !== DEFAULT_GENERATE_TASKS_PROMPT ? (
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px] text-muted-foreground" onClick={() => setPromptValue(DEFAULT_GENERATE_TASKS_PROMPT)}>Restaurar instrucciones originales</Button>
+              ) : <span />}
             </div>
-          )}
+          </div>
 
-          <button
-            onClick={() => setPhase({ id: 'idle' })}
-            style={{
-              marginTop: '1rem', padding: '0.5rem 1rem', borderRadius: 10,
-              border: `1px solid ${T.border2}`, background: T.surface2,
-              color: T.textDim, fontSize: '0.72rem', fontWeight: 600,
-              cursor: 'pointer', fontFamily: T.font,
-            }}
-          >
-            ← Importar otro archivo
-          </button>
-        </div>
+          <details className="rounded-[7px] border border-border/60 bg-muted/30 px-3 py-2">
+            <summary className="cursor-pointer text-[11px] font-medium text-muted-foreground">Ver prompt final completo</summary>
+            <pre className="mt-2 max-h-48 overflow-y-auto whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-muted-foreground">{finalPrompt}</pre>
+          </details>
+
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setPromptOpen(false)}>Cancelar</Button>
+            <Button size="sm" onClick={handleGenerate} disabled={!promptValue.trim()} className="gap-1.5"><Sparkles size={13} /> Generar tareas</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {parsed && (
+        <section className="overflow-hidden rounded-[8px] border border-border/70 bg-card shadow-sm animate-in">
+          <div className="flex flex-col justify-between gap-3 border-b border-border/60 px-4 py-3 sm:flex-row sm:items-center"><div><p className="text-xs font-semibold">Vista previa</p><p className="mt-0.5 text-[10px] text-muted-foreground">Mostrando {Math.min(8, parsed.rows.length)} de {parsed.rows.length} filas</p></div><Button onClick={handleImport} size="sm" className="h-9 gap-2 rounded-[8px] text-xs">Importar {parsed.rows.length} tareas <ArrowRight size={13} /></Button></div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-[10px]"><thead className="bg-muted/45 text-muted-foreground"><tr><th className="px-4 py-2.5 font-semibold">#</th>{parsed.headers.map(header => <th key={header} className="px-3 py-2.5 font-semibold">{header}</th>)}</tr></thead><tbody>{parsed.rows.slice(0, 8).map((row, index) => <tr key={index} className="border-t border-border/50"><td className="px-4 py-3 text-muted-foreground">{index + 1}</td>{parsed.headers.map(header => <td key={header} className="max-w-[220px] truncate px-3 py-3" title={row[header]}>{header === 'status' ? <StatusBadge value={row[header]} /> : header === 'priority' ? <PriorityBadge value={row[header]} /> : row[header] || <span className="text-muted-foreground">-</span>}</td>)}</tr>)}</tbody></table></div>
+        </section>
       )}
 
+      {phase.id === 'done' && <section className="material-panel flex flex-col justify-between gap-4 rounded-[8px] p-5 sm:flex-row sm:items-center"><div><p className="text-sm font-semibold">{phase.result.inserted} tareas disponibles</p><p className="mt-1 text-[11px] text-muted-foreground">Los embeddings se generan en segundo plano para habilitar la búsqueda semántica.</p></div><Button variant="outline" size="sm" onClick={() => setPhase({ id: 'idle' })} className="rounded-[8px] text-xs">Importar otro archivo</Button></section>}
     </div>
   )
 }
 
-// ── Small badge components ────────────────────────────────────────────────────
-function StatusBadge({ v }: { v: string }) {
-  const map: Record<string, { label: string; color: string; bg: string; border: string }> = {
-    todo:        { label: 'Por hacer',  color: '#94a3b8', bg: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.2)' },
-    in_progress: { label: 'En curso',   color: '#fbbf24', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)' },
-    done:        { label: 'Completa',   color: '#4ade80', bg: 'rgba(34,197,94,0.12)',  border: 'rgba(34,197,94,0.25)'  },
-  }
-  const cfg = map[v?.toLowerCase()] ?? map['todo']
-  return (
-    <span style={{ display: 'inline-block', padding: '0.15rem 0.55rem', borderRadius: 999, fontSize: '0.65rem', fontWeight: 600, background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color }}>
-      {cfg.label}
-    </span>
-  )
+function StatusBadge({ value }: { value: string }) {
+  const config = value === 'done' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : value === 'in_progress' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'bg-slate-500/10 text-slate-600 dark:text-slate-300'
+  return <span className={cn('rounded-full px-2 py-1 text-[9px] font-semibold', config)}>{value || 'todo'}</span>
 }
 
-function PriorityBadge({ v }: { v: string }) {
-  const map: Record<string, { label: string; color: string; bg: string; border: string }> = {
-    high:   { label: '▲ Alta',  color: '#f87171', bg: 'rgba(239,68,68,0.1)',  border: 'rgba(239,68,68,0.2)'  },
-    medium: { label: '● Media', color: '#fbbf24', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.2)' },
-    low:    { label: '▼ Baja',  color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.15)' },
-  }
-  const cfg = map[v?.toLowerCase()] ?? map['medium']
-  return (
-    <span style={{ display: 'inline-block', padding: '0.15rem 0.55rem', borderRadius: 999, fontSize: '0.65rem', fontWeight: 600, background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color }}>
-      {cfg.label}
-    </span>
-  )
+function PriorityBadge({ value }: { value: string }) {
+  const config = value === 'high' ? 'bg-red-500/10 text-red-700 dark:text-red-300' : value === 'low' ? 'bg-slate-500/10 text-slate-600 dark:text-slate-300' : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+  return <span className={cn('rounded-full px-2 py-1 text-[9px] font-semibold', config)}>{value || 'medium'}</span>
 }

@@ -41,16 +41,20 @@ function detectStructuralIntent(query: string): StructuralIntent {
 async function searchTasksByFilter(
   intent: StructuralIntent,
   userId: string,
-  limit: number
+  limit: number,
+  projectId?: string | null
 ): Promise<TaskSearchResult[]> {
   const supabase = await createClient()
 
   let query = supabase
     .from('tasks')
     .select('id, title, description, status, priority')
-    .eq('user_id', userId)
     .order('position', { ascending: true })
     .limit(limit)
+
+  query = projectId
+    ? query.eq('project_id', projectId)
+    : query.eq('user_id', userId).is('project_id', null)
 
   if (intent.status) query = query.eq('status', intent.status)
   if (intent.priority) query = query.eq('priority', intent.priority)
@@ -78,7 +82,8 @@ async function searchTasksBySemantic(
   query: string,
   userId: string,
   threshold: number,
-  limit: number
+  limit: number,
+  projectId?: string | null
 ): Promise<TaskSearchResult[]> {
   const queryEmbedding = await generateQueryEmbedding(query)
   const supabase = await createClient()
@@ -96,7 +101,27 @@ async function searchTasksBySemantic(
     return []
   }
 
-  return (data as TaskSearchResult[]) ?? []
+  const results = (data as TaskSearchResult[]) ?? []
+  if (results.length === 0) return []
+
+  const ids = results.map(task => task.task_id)
+  let scopeQuery = supabase
+    .from('tasks')
+    .select('id')
+    .in('id', ids)
+
+  scopeQuery = projectId
+    ? scopeQuery.eq('project_id', projectId)
+    : scopeQuery.eq('user_id', userId).is('project_id', null)
+
+  const { data: scopedTasks, error: scopeError } = await scopeQuery
+  if (scopeError) {
+    console.error('[rag] Error filtrando scope vectorial:', scopeError)
+    return []
+  }
+
+  const scopedIds = new Set((scopedTasks ?? []).map(task => task.id))
+  return results.filter(task => scopedIds.has(task.task_id))
 }
 
 // ─── Fusión de resultados deduplicada ─────────────────────────────────────────
@@ -135,9 +160,9 @@ const FETCH_LIMIT  = 20  // candidates fetched before reranking
 
 export async function searchTasksByQuery(
   query: string,
-  options: { threshold?: number; limit?: number; userId?: string } = {}
+  options: { threshold?: number; limit?: number; userId?: string; projectId?: string | null } = {}
 ): Promise<TaskSearchResult[]> {
-  const { threshold = 0.3, userId } = options
+  const { threshold = 0.3, userId, projectId = null } = options
 
   if (!userId) {
     console.error('[rag] userId requerido')
@@ -151,12 +176,12 @@ export async function searchTasksByQuery(
 
   if (hasStructuralIntent) {
     const [structural, semantic] = await Promise.all([
-      searchTasksByFilter(intent, userId, FETCH_LIMIT),
-      searchTasksBySemantic(query, userId, threshold, FETCH_LIMIT),
+      searchTasksByFilter(intent, userId, FETCH_LIMIT, projectId),
+      searchTasksBySemantic(query, userId, threshold, FETCH_LIMIT, projectId),
     ])
     candidates = mergeResults(structural, semantic, FETCH_LIMIT)
   } else {
-    candidates = await searchTasksBySemantic(query, userId, threshold, FETCH_LIMIT)
+    candidates = await searchTasksBySemantic(query, userId, threshold, FETCH_LIMIT, projectId)
   }
 
   // Rerank only when there are enough candidates to benefit
@@ -226,8 +251,8 @@ export async function getProjectSummary(userId: string, projectId?: string | nul
   const supabase = await createClient()
 
   const taskQuery = projectId
-    ? supabase.from('tasks').select('status, due_date').eq('user_id', userId).eq('project_id', projectId)
-    : supabase.from('tasks').select('status, due_date').eq('user_id', userId)
+    ? supabase.from('tasks').select('status, due_date').eq('project_id', projectId)
+    : supabase.from('tasks').select('status, due_date').eq('user_id', userId).is('project_id', null)
 
   const projectQuery = projectId
     ? supabase.from('projects').select('delivery_date').eq('id', projectId).single()
@@ -240,7 +265,7 @@ export async function getProjectSummary(userId: string, projectId?: string | nul
   let allTasks = tasks ?? []
   if (projectId && allTasks.length === 0) {
     const { data: fallback } = await supabase
-      .from('tasks').select('status, due_date').eq('user_id', userId)
+      .from('tasks').select('status, due_date').eq('user_id', userId).is('project_id', null)
     allTasks = fallback ?? []
   }
   const now = new Date()

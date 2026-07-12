@@ -120,16 +120,16 @@ METRICAS DE EJECUCION:
 Proporciona tu auditoría técnica completa. Sé implacable y específico. Cita las tareas del stack por nombre cuando identifiques riesgos.`
 }
 
-// ── Llamada a Groq ────────────────────────────────────────────────────────────
-async function callGroq(userMessage: string): Promise<string> {
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+// ── Llamada a DeepSeek ─────────────────────────────────────────────────────────
+async function callDeepSeek(userMessage: string): Promise<string> {
+  const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+      'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'deepseek-chat',
       messages: [
         { role: 'system', content: AUDITOR_SYSTEM },
         { role: 'user',   content: userMessage },
@@ -139,7 +139,7 @@ async function callGroq(userMessage: string): Promise<string> {
       max_tokens: 2200,
     }),
   })
-  if (!res.ok) throw new Error(`Groq ${res.status}`)
+  if (!res.ok) throw new Error(`DeepSeek ${res.status}`)
   const data = await res.json()
   return data.choices?.[0]?.message?.content ?? ''
 }
@@ -202,9 +202,9 @@ export async function POST(request: NextRequest) {
   let audit = ''
 
   try {
-    audit = await callGroq(userMessage)
-  } catch (groqErr) {
-    console.error('[api/audit] Groq falló, intentando Anthropic:', groqErr)
+    audit = await callDeepSeek(userMessage)
+  } catch (deepseekErr) {
+    console.error('[api/audit] DeepSeek falló, intentando Anthropic:', deepseekErr)
     if (process.env.ANTHROPIC_API_KEY) {
       try {
         audit = await callAnthropic(userMessage)

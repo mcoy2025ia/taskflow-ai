@@ -83,7 +83,7 @@ export function useAnalytics(projectId?: string | null): AnalyticsState {
     const run = () =>
       load()
         .catch((err: unknown) => {
-          const message = err instanceof Error ? err.message : 'Error al cargar analítica'
+          const message = err instanceof Error ? err.message : 'Error al cargar analitica'
           console.error('[use-analytics]', message)
           setError(message)
         })
@@ -94,7 +94,6 @@ export function useAnalytics(projectId?: string | null): AnalyticsState {
     // Re-fetch when the agent or CSV import triggers a board update
     window.addEventListener('taskflow:board_update', run)
     return () => window.removeEventListener('taskflow:board_update', run)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
   if (loading || error) {
@@ -114,7 +113,7 @@ export function useAnalytics(projectId?: string | null): AnalyticsState {
     ? Math.round(tasks.filter(t => t.status === 'done').length / tasks.length * 100)
     : 0
 
-  // When ≥90% done, cap delivery date to today + 15 days so velocity reflects reality
+  // When 90%+ done, cap delivery date to today + 15 days so velocity reflects reality
   const endDate   = pctQuick >= 90
     ? new Date(todayUTC.getTime() + 15 * 86400000)
     : parseUTCDate(endRaw)

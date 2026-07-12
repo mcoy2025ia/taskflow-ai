@@ -9,7 +9,36 @@ export interface ChatProvider {
   stream(messages: ChatMessage[]): Promise<ReadableStream<Uint8Array>>
 }
 
-// Groq: cloud, ultra-rápido, ideal para producción
+// DeepSeek: cloud, OpenAI-compatible, ideal para producción
+class DeepSeekProvider implements ChatProvider {
+  private readonly baseUrl = 'https://api.deepseek.com/v1'
+  private readonly model = 'deepseek-chat'
+
+  async stream(messages: ChatMessage[]): Promise<ReadableStream<Uint8Array>> {
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY ?? ''}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: this.model,
+        messages,
+        stream: true,
+        temperature: 0.3, // Bajo: respuestas más deterministas para gestión de tareas
+        max_tokens: 1024,
+      }),
+    })
+
+    if (!response.ok || !response.body) {
+      throw new Error(`DeepSeek error: ${response.status}`)
+    }
+
+    return response.body
+  }
+}
+
+// Groq: cloud, ultra-rápido, alternativa a DeepSeek
 class GroqProvider implements ChatProvider {
   private readonly baseUrl = 'https://api.groq.com/openai/v1'
   private readonly model = 'llama-3.3-70b-versatile'
@@ -73,13 +102,14 @@ class OllamaProvider implements ChatProvider {
 
 // Factory: seleccionar proveedor en runtime
 export function getChatProvider(): ChatProvider {
-  const provider = process.env.CHAT_PROVIDER ?? 'groq'
+  const provider = process.env.CHAT_PROVIDER ?? 'deepseek'
 
   switch (provider) {
-    case 'ollama': return new OllamaProvider()
-    case 'groq':   return new GroqProvider()
+    case 'ollama':   return new OllamaProvider()
+    case 'groq':     return new GroqProvider()
+    case 'deepseek': return new DeepSeekProvider()
     default:
-      console.warn(`[chat] Proveedor desconocido "${provider}", usando Groq`)
-      return new GroqProvider()
+      console.warn(`[chat] Proveedor desconocido "${provider}", usando DeepSeek`)
+      return new DeepSeekProvider()
   }
 }

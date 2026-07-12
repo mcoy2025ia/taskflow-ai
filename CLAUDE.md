@@ -9,7 +9,7 @@ SaaS de productividad multi-usuario: tablero Kanban colaborativo + agente RAG co
 - **Frontend**: Next.js 16.2.4 App Router + TypeScript strict + React 19
 - **Auth + DB**: Supabase (`@supabase/ssr`) con RLS en todas las tablas; 10 migraciones en `supabase/migrations/`
 - **Embeddings**: Voyage AI `voyage-3-lite` → 512 dimensiones + reranking con `rerank-2-lite` (`src/lib/ai/voyage.ts`)
-- **Chat**: Groq `llama-3.3-70b-versatile` con tool calling; fallback a Claude Haiku 4.5 (`ANTHROPIC_API_KEY`)
+- **Chat**: DeepSeek `deepseek-chat` (OpenAI-compatible) con tool calling; alternativas Groq/Ollama vía `CHAT_PROVIDER`; fallback a Claude Haiku 4.5 (`ANTHROPIC_API_KEY`)
 - **UI**: Tailwind CSS v4 + shadcn/ui + `@base-ui/react` + @dnd-kit + Geist font (variable font, sin flash de tema)
 - **Analítica**: gráficos DIV-based (`recharts` está instalado pero no se importa en ningún componente); `jspdf` para exportar PDF (sin `html2canvas` — incompatible con oklch de Tailwind v4); `buildAnalyticsPDF` carga lazy con `await import(...)`
 - **Rate limiting**: Upstash Redis (`@upstash/ratelimit`) — chat 20/min, report 5/min, embed 100/min
@@ -43,95 +43,88 @@ Los tests viven en `src/actions/__tests__/` (tasks), `src/hooks/__tests__/` (use
 Para correr un solo archivo: `npx vitest run src/lib/__tests__/hmac.test.ts`
 
 ### Tests E2E (Playwright)
-Requieren `.env.local` con `TEST_USER_EMAIL` y `TEST_USER_PASSWORD` reales. El proyecto `setup` ejecuta `e2e/auth.setup.ts` primero, guarda auth en `e2e/.auth/user.json`. Specs: `login`, `dashboard`, `chat`, `analytics`, `agent`.
+Requieren `.env.local` con `TEST_USER_EMAIL` y `TEST_USER_PASSWORD` reales. El proyecto `setup` ejecuta `e2e/auth.setup.ts` primero, guarda auth en `e2e/.auth/user.json`. Specs autenticadas: `dashboard`, `chat`, `analytics`, `agent`.
 
-## Estructura crítica
+Hay un proyecto Playwright `public` para validar login/guards sin sesion real:
+```bash
+npx playwright test --project=public
 ```
-middleware.ts              ← RAÍZ (no en src/); /invite/* es ruta pública sin auth; matcher excluye /api/embed y /api/backfill
+
+Si el setup autenticado falla con `Credenciales invalidas` o se queda en `/login`, revisar primero si el proyecto de Supabase esta pausado. En ese caso hay que restaurarlo desde Supabase Dashboard y esperar a que Auth/Database/Realtime queden activos antes de cambiar codigo, usuarios o secrets.
+
+## Flujo de Contexto Activo (URL + localStorage + React)
+Las decisiones de proyecto se sincronizaban por localStorage. **Cambio reciente**: ahora todo se rige por `?project_id=` en la URL:
+1. `ActiveProjectProvider` (contexts/active-project.tsx) lee URL al montar y al cambiar; sincroniza localStorage para persistencia de sesion
+2. Components suscritos via `useActiveProject()` actualizan automáticamente cuando el URL cambia
+3. **Auto-selección**: `project-switcher.tsx` selecciona el proyecto más activo en login; `useEffect` en DashboardShell sincroniza cambios de URL
+4. **Beneficio**: el URL es source-of-truth, permitiendo compartir links con `?project_id=` y sincronizar multi-tab
+5. **Casos clave**:
+   - `/board` sin ?project_id= → usa localStorage (última sesión)
+   - `/board?project_id=ABC` → fuerza el proyecto ABC
+   - `/chat?project_id=ABC` → agente ve el contexto del proyecto
+   - `/analytics?project_id=ABC` → reportes del proyecto específico
+
+## Estructura de Carpetas Crítica
+**Root + Configuración**:
+```
+middleware.ts              ← RAÍZ (no en src/); /invite/* es ruta pública sin auth
 vercel.json                ← cron /api/cron/insights a las 08:00 UTC
-.lighthouserc.js           ← budgets: LCP <2.5s (error), CLS <0.1 (error), TBT <200ms (warn)
-public/
-  template-tareas.csv     ← plantilla CSV descargable (14 tareas Olist de ejemplo)
-scripts/
-  seed-embeddings.ts      ← batch embedding Voyage AI, respeta rate limits (21 req/s)
+.lighthouserc.js           ← budgets: LCP <2.5s, CLS <0.1, TBT <200ms
+public/template-tareas.csv ← plantilla CSV (14 tareas ejemplo)
+```
+
+**App Router & Páginas**:
+```
+src/app/
+  (auth)/                ← login, register — sin sidebar; redirige a /board si hay user
+  (dashboard)/layout.tsx ← DashboardShell (side + top bar), ActiveProjectProvider
+    board/
+      page.tsx           ← Server Component; lee URL ?project_id; Suspense<BoardTasks>
+      loading.tsx        ← skeleton
+    analytics/           ← gráficos + PDF export (lazy buildAnalyticsPDF)
+    chat/                ← verifica ownership de session_id; lee ?project_id de URL
+  invite/[token]/        ← público; aceptar invitación sin auth
+  api/
+    chat/, chat/confirm/ ← SSE streaming + confirmación de tools destructivas
+    embed/               ← requiere HMAC; usa service_role para upsert embeddings
+    report/              ← informe ejecutivo, rate-limited 5/min
+    cron/insights/       ← GET protegido por CRON_SECRET header
+```
+
+**Server & Client**:
+```
 src/
-  app/
-    (auth)/               ← login, register — sin sidebar
-    (dashboard)/          ← board, chat, analytics — con sidebar + topbar
-      layout.tsx          ← DashboardShell + sidebar + topbar
-      board/
-        page.tsx          ← Server Component; InsightBanner + Suspense<BoardTasks>
-        loading.tsx       ← skeleton de carga
-      analytics/          ← gráficos + exportación PDF (buildAnalyticsPDF lazy)
-      chat/               ← verifica ownership de session_id antes de cargarlo
-    invite/[token]/       ← página pública; estados: inválida/expirada/aceptada/sin-auth
-    api/
-      chat/               ← SSE streaming, runtime: nodejs
-      chat/confirm/       ← ejecuta tool destructiva confirmada
-      embed/              ← requiere HMAC, usa service_role
-      report/             ← informe ejecutivo con Groq, runtime: nodejs
-      cron/insights/      ← GET protegido por CRON_SECRET (Authorization header)
-  actions/
-    auth.actions.ts       ← signIn, signUp, signOut (maneja NEXT_REDIRECT de Next.js)
-    task.actions.ts       ← CRUD + assignTask/unassignTask + Sentry breadcrumbs
-    project.actions.ts    ← getProjects, createProject, seedDemoProject
-    invite.actions.ts     ← inviteToProject, acceptInvitation, sendInviteEmail
-    comment.actions.ts    ← addComment, getComments, deleteComment
-    chat.actions.ts       ← createChatSession, getChatSessions, getChatMessages, saveMessages
-    import.actions.ts     ← importTasksCSV: batch insert + embeddings throttled (5 paralelos / 3s)
+  actions/               ← Server Actions: auth, task CRUD, projects, invites, chat, CSV import
   components/
-    kanban/
-      board-dynamic.tsx   ← dynamic(() => import('./board'), { ssr: false })
-      board.tsx           ← KanbanBoard; empty state renderiza CsvImport cuando 0 tareas
-      task-card.tsx       ← TaskWithAssignees; abre drawer via context; avatar stack
-      task-drawer.tsx     ← panel lateral: comentarios, asignados, metadatos
-      member-filter-bar.tsx← chips de filtro por miembro del proyecto
-      insight-banner.tsx  ← alerta amber dismissable (tareas vencidas / riesgo velocidad)
-      board-actions.tsx   ← "Poblar Olist" + "Borrar todo" (Dialog de confirmación)
-    analytics/
-      csv-import.tsx      ← parser CSV + preview + drop zone (dark MCOY); router.refresh() tras insertar
-    chat/
-      chat-interface.tsx  ← UI de chat (<120 líneas, solo presentación)
-      message-renderer.tsx← MessageContent (citas [N]), ToolActivityList, ConfirmCard, SourceChips
-    layout/
-      dashboard-shell.tsx ← 'use client'; estado isSidebarOpen; monta OnboardingModal
-      sidebar.tsx         ← navegación + ProjectSwitcher
-      topbar.tsx          ← tema toggle (suppressHydrationWarning en el botón)
-    onboarding/
-      onboarding-modal.tsx← 4 pasos; localStorage 'onboarding_done'; seedDemoProject
+    kanban/              ← board.tsx (empty → CsvImport), task-card, task-drawer, board-actions ("Borrar todo")
+    analytics/           ← csv-import.tsx, charts
+    chat/                ← chat-interface.tsx (<120 LOC), message-renderer
+    layout/              ← dashboard-shell (state isSidebarOpen), sidebar, topbar, project-switcher
+    onboarding/          ← 4-step modal, localStorage 'onboarding_done'
   contexts/
-    active-project.tsx    ← ActiveProjectProvider; localStorage + URL ?project_id=
+    active-project.tsx   ← URL ?project_id= + localStorage + React Context
   hooks/
-    use-chat-stream.ts    ← SSE parser, persist sesión, confirm_required handler
-    use-voice-input.ts    ← Web Speech API
-    use-chat-tts.ts       ← SpeechSynthesisUtterance es-CO rate 1.1
-    use-analytics.ts      ← fetch + cálculos de métricas
-    use-realtime-tasks.ts ← Supabase Realtime; skips own changes; toast para otros
+    use-chat-stream.ts   ← SSE event parser; maneja confirm_required
+    use-tasks-by-status.ts ← agrupa tareas por estado; usado por Kanban
+    use-realtime-tasks.ts ← Supabase Realtime; auto-refresh
+    use-analytics.ts     ← fetch métricas y dashboards
+    use-voice-input.ts   ← Web Speech API
+    use-chat-tts.ts      ← SpeechSynthesisUtterance (es-CO, rate 1.1)
   lib/
-    supabase/
-      client.ts           ← createBrowserClient (solo 'use client')
-      server.ts           ← createServerClient con cookies() — nuevo en cada request
-      get-user.ts         ← React cache() wrapper
+    supabase/            ← client/server factories, getUser()
     ai/
-      voyage.ts           ← generateEmbedding, generateQueryEmbedding, rerank (rerank-2-lite)
-      agent.ts            ← loop tool calling 2 turnos SSE; Groq → Haiku fallback; Sentry events
-      rag.ts              ← híbrida: intent + vector → top-20 → rerank → top-5;
-                            también exporta buildContextBlock, buildSystemPrompt, getProjectSummary
-      tools.ts            ← 6 tools: create_task/update_task/move_task/delete_task/search_tasks/search_comments
-      chat.ts             ← getChatProvider() → GroqProvider | OllamaProvider
-    analytics/
-      metrics.ts          ← funciones puras: calculateBurndown, calculateVelocity, detectRisk
-      pdf-builder.ts      ← jsPDF sin html2canvas; importado lazily desde analytics/page.tsx
-    validations/
-      task.schema.ts      ← CreateTaskSchema, UpdateTaskSchema, MoveTaskSchema (Zod)
-      auth.schema.ts      ← esquemas de login/registro
-    ratelimit.ts          ← Upstash: chat 20/min, report 5/min, embed 100/min
-    hmac.ts               ← signRequest(path, body) incluye SHA-256(body); timingSafeEqual
-    bot-guard.ts          ← isBot() chequea x-vercel-is-bot: 1; botBlockResponse() 403
-    env.ts                ← validación Zod de process.env al boot
-  types/
-    app.types.ts          ← Task, TaskWithAssignees, KanbanColumn, ProjectMember, ChatMessage
-    chat-ui.types.ts      ← ChatUIMessage, Source, ToolActivity, PendingConfirm
+      voyage.ts          ← embeddings + rerank (rerank-2-lite)
+      agent.ts           ← SSE loop 2-turn; DeepSeek/Groq/Ollama + Haiku fallback; Sentry events
+      rag.ts             ← hybrid: intent + vector → top-20 → rerank-5; buildSystemPrompt()
+      tools.ts           ← 6 tools de agent (create/update/move/delete/search)
+      chat.ts            ← getChatProvider() (DeepSeek | Groq | Ollama)
+    analytics/           ← metrics.ts (burndown, velocity), pdf-builder.ts (jsPDF)
+    validations/         ← Zod schemas para tasks + auth
+    ratelimit.ts         ← Upstash limits
+    hmac.ts              ← signRequest/verifyRequest con SHA-256
+    bot-guard.ts         ← isBot, botBlockResponse
+    env.ts               ← validación al boot
+  types/                 ← app.types.ts, chat-ui.types.ts
 ```
 
 ## Agente: flujo SSE completo
@@ -161,6 +154,7 @@ El loop tiene 3 caminos:
    - Sin intención → solo vector via RPC `search_tasks_by_embedding`
 3. Candidatos: top-20 → `rerank(query, docs, 5)` con `rerank-2-lite` → top-5 al LLM
 4. Fallback graceful si rerank falla (usa top candidatos sin reranking)
+5. Scope: si hay `projectId`, tanto SQL directo como resultados vectoriales se filtran al proyecto activo; sin `projectId`, se usan tareas personales (`project_id IS NULL`).
 
 ## Multi-tenancy
 - `project_members(project_id, user_id, role)` — roles: owner/editor/viewer
@@ -168,6 +162,7 @@ El loop tiene 3 caminos:
 - `get_project_member_profiles(project_id)` — solo retorna si el caller es miembro
 - Invitaciones: token hex-64, expiran en 7 días, `accept_invitation(token)` hace upsert en `project_members`
 - Realtime: canal `project-tasks:{projectId}`; skips cambios propios por `record.user_id === currentUserId`
+- Server Actions y tools del agente deben respetar scope: proyectos compartidos se validan por `project_members` owner/editor; tareas personales se filtran por `user_id` + `project_id IS NULL`.
 
 ## Funciones SQL críticas
 Todas en `supabase/migrations/`, todas `SECURITY DEFINER`:
@@ -180,43 +175,70 @@ Todas en `supabase/migrations/`, todas `SECURITY DEFINER`:
 ## Reglas de seguridad — nunca romper
 1. `SUPABASE_SERVICE_ROLE_KEY` solo en `api/embed` y tests. Jamás en cliente.
 2. Toda Server Action valida con Zod `.safeParse()` antes de cualquier query.
-3. Queries de Supabase siempre incluyen `.eq('user_id', user.id)` además del RLS.
+3. Queries personales incluyen `.eq('user_id', user.id)` y `.is('project_id', null)`; queries de proyecto compartido validan membresia/rol y filtran por `.eq('project_id', projectId)`.
 4. INSERT en `task_embeddings` solo via `upsert_task_embedding()` con service_role.
 5. `createClient()` del servidor es async — siempre `await createClient()`.
+6. **Cuenta demo/invitado** (`user.email === env.DEMO_EMAIL`) nunca debe poder ejecutar acciones destructivas irreversibles (ej. `deleteAllTasks`). El check va en dos capas: UI (oculta/redirige el botón, ver `board-actions.tsx`) **y** Server Action (rechaza explícitamente aunque se invoque directo, ver `project.actions.ts`). Al agregar una nueva acción destructiva, replicar ambas capas.
+
+## Server vs Client Components
+- **Regla general**: páginas son Server Components (`page.tsx`) a menos que necesiten interactividad; luego se dividen
+- **board/page.tsx**: Server Component, carga tareas del proyecto con `readTasks()`, wrappea con `Suspense<BoardTasks>` que es dinamically imported (`ssr: false`)
+- **chat/page.tsx**: Server Component, valida ownership de `session_id`, carga historial con `getChatMessages()`; `ChatInterface` es `'use client'`
+- **analytics/page.tsx**: Server Component, carga métricas; componentes gráficos son `'use client'`; lazy importa `buildAnalyticsPDF` para no bloquer el server
+- **Kanban (board.tsx)**: `'use client'` porque necesita drag-drop, optimistic updates, realtime listening; usa `useOptimistic` + `useTransition` para `moveTask`
+- **Sidebar + Topbar**: `'use client'` para state (sidebar toggle), tema, project-switcher interactivo
 
 ## Convenciones de código
 - Server Actions retornan `ActionResult<T>`: `{ success: true, data: T } | { success: false, error: string }`
 - Errores Zod: usar `.issues[0]?.message` (no `.errors[0]` — Zod v4 cambió el nombre)
-- Posición de tareas: espaciado de 1000. Insertar al medio = `Math.round((prev + next) / 2)`
-- `triggerEmbedding` usa fire-and-forget (`void fetch(...)`) — no bloquea al usuario
-- `useOptimistic` + `useTransition` en Kanban — si `moveTask` falla, revierte automáticamente
-- `importTasksCSV`: máximo 500 filas; batch insert; embeddings en chunks de 5 paralelos con delay de 3s para respetar el rate limit de `/api/embed` (100/min)
+- **Posición de tareas**: espaciado de 1000. Insertar entre dos tareas = `Math.round((prev + next) / 2)`; así rearranges siempre encuentra espacio
+- **Embeddings de tareas**: al crear/actualizar, `triggerEmbedding()` hace fire-and-forget con `void fetch(...)` — no bloquea el usuario; el `/api/embed` se ejecuta async
+- **Kanban optimista**: `useOptimistic` mantiene UI sync mientras `moveTask` vuela al servidor; si falla, React revierte automáticamente
+- **CSV import**: máx 500 filas; batch insert sin embeddings primero, luego embeddings en chunks de 5 paralelos (delay 3s entre chunks) para respetar `/api/embed` (100/min)
+- **Fechas inteligentes**: `parseSmartDate()` en `task.schema.ts` maneja DD/MM/YYYY, YYYY-MM-DD, y fechas relativas (mañana, próx. lunes). Siempre retorna ISO string
+- **Chat SSE**: el cliente parsea eventos línea por línea; tipos en `chat-ui.types.ts`; confirmar tool destructiva requiere POST a `/api/chat/confirm`
+
+## Onboarding
+- **Trigger**: primer acceso después de login → `onboarding-modal.tsx` renderiza modal 4-paso si `localStorage['onboarding_done']` no existe
+- **Pasos**: bienvenida → crear proyecto demo (`seedDemoProject`) → importar tareas Olist de template → invitar miembro (mail optional)
+- **Persistencia**: al completar, guarda `onboarding_done = true` en localStorage; el modal nunca reaparece en ese navegador
+- **Skip**: hay botón "Saltar" en cada paso; completa y guarda el flag igual
+- **Demo project**: al aceptar, ejecuta `seedDemoProject()` que crea un proyecto con 14 tareas de ejemplo + embeddings
 
 ## Importación CSV
-- **Entrada**: tablero vacío → `board.tsx` detecta `optimisticTasks.length === 0` → renderiza `<CsvImport />` en lugar de las 3 columnas
-- **Flujo**: descargar `public/template-tareas.csv` → editar → drop o select → parser local con preview de 10 filas → click "Importar" → server action `importTasksCSV()` valida con `RowSchema` (Zod permisivo con `.catch()` para enum) → batch insert → embeddings throttleados → `router.refresh()` repobla el Server Component del board
-- **Esquema CSV**: `title` (req, ≤200), `description` (opc, ≤2000), `status` (todo|in_progress|done, default `todo`), `priority` (low|medium|high, default `medium`), `due_date` (YYYY-MM-DD o DD/MM/YYYY)
-- **Project scope**: si hay `projectId` activo verifica `project_members` con rol owner/editor; si no hay proyecto activo, las tareas se crean como personales del user
+- **Entrada**: tablero vacío → `board.tsx` detecta `optimisticTasks.length === 0` → renderiza `<CsvImport />` en lugar de las 3 columnas Kanban
+- **Flujo**: descargar `public/template-tareas.csv` → editar → drag-drop o select file → parser local con preview de 10 filas → click "Importar" → server action `importTasksCSV()` valida con `RowSchema` (Zod permisivo con `.catch()` para enum) → batch insert → embeddings throttleados (chunks de 5 + delay 3s) → `router.refresh()` repobla el Server Component
+- **Esquema CSV**: `title` (req, ≤200), `description` (opc, ≤2000), `status` (todo|in_progress|done, def `todo`), `priority` (low|medium|high, def `medium`), `due_date` (YYYY-MM-DD o DD/MM/YYYY; parseSmartDate soporta también DD/MM/YYYY)
+- **Project scope**: si `projectId` activo verifica `project_members` rol owner/editor; si no, tareas se crean como personales del user
+- **Generar con IA**: botón abre un `Dialog` (no genera directo) con Empresa/Proyecto-Área (prefill desde `projects.company`/`department`) + chips de miembros reales del proyecto (`ProjectMember[]`) + textarea editable con las instrucciones (`DEFAULT_GENERATE_TASKS_PROMPT` en `src/lib/ai/generate-tasks-prompt.ts` — módulo separado porque `import.actions.ts` tiene `'use server'` y solo puede exportar funciones async). El prompt final = bloque de contexto + instrucciones, visible en un `<details>` colapsable antes de confirmar. `generateTasksCSV(customPrompt?)` valida el prompt con Zod (`max 4000`) antes de llamar a DeepSeek
+
+## URL Parameters (Query Strings)
+```
+?project_id=<uuid>  ← fuerza el proyecto en board, chat, analytics; read-only por defecto
+                      si no existe o el user no es miembro, se ignora
+?session_id=<uuid>  ← en chat/page, valida que el user sea propietario antes de cargar historial
+```
 
 ## Variables de entorno requeridas
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-GROQ_API_KEY=
+DEEPSEEK_API_KEY=
 VOYAGE_API_KEY=               # voyage-3-lite (512 dims) + rerank-2-lite
 EMBED_INTERNAL_SECRET=        # mínimo 32 chars — openssl rand -hex 32
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-CHAT_PROVIDER=groq            # 'groq' | 'ollama'
+CHAT_PROVIDER=deepseek        # 'deepseek' | 'groq' | 'ollama'
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
 
 # Opcionales
+GROQ_API_KEY=                 # solo si CHAT_PROVIDER=groq
 OLLAMA_BASE_URL=http://localhost:11434  # solo si CHAT_PROVIDER=ollama
 OLLAMA_MODEL=llama3.2                  # solo si CHAT_PROVIDER=ollama
 RESEND_API_KEY=               # emails de invitación (sin esto, loguea la URL en consola)
-ANTHROPIC_API_KEY=            # fallback Claude Haiku 4.5 si Groq cae
-AI_GATEWAY_BASE_URL=          # Vercel AI Gateway; cambia base URL y prefija modelo con 'groq/'
+ANTHROPIC_API_KEY=            # fallback Claude Haiku 4.5 si DeepSeek/Groq caen
+AI_GATEWAY_BASE_URL=          # Vercel AI Gateway; cambia base URL y prefija modelo con 'deepseek/' o 'groq/'
 VERCEL_OIDC_TOKEN=            # auto-inyectado por Vercel en producción; habilita autenticación OIDC con AI Gateway
 CRON_SECRET=                  # protege /api/cron/insights
 NEXT_PUBLIC_SENTRY_DSN=
@@ -225,16 +247,35 @@ SENTRY_PROJECT=
 SENTRY_AUTH_TOKEN=
 ```
 
+## Patrones comunes
+### Actualizar proyecto desde URL
+Cuando el usuario cambia ?project_id= en el URL:
+1. `ActiveProjectProvider` detecta cambio en `useEffect`
+2. Actualiza contexto → components suscritos con `useActiveProject()` se re-renderizan
+3. Server Components NO reciben el contexto directamente; pasan `projectId` como URL param o prop desde cliente
+4. **Dashboard server**: `board/page.tsx` lee `?project_id=` de `searchParams` (Next.js 16)
+5. **API routes**: leen `?project_id=` de `request.nextUrl.searchParams`
+
+### Confirmar tools destructivas
+1. Agent emite `{ type: 'confirm_required', tool, args, confirm_id }`
+2. UI renderiza `<ConfirmCard>` que bloqueado hasta confirmación
+3. User hace click → POST a `/api/chat/confirm` con `{ tool, args, confirm_id }`
+4. Backend ejecuta la tool confirmada; retorna resultado
+5. Cliente recibe respuesta normal (tipo `tool_result`)
+
 ## Errores comunes y solución
-- **`cookies() should be awaited`**: `cookies()` es async — siempre `await cookies()`. Aplica a `createClient()` también.
-- **`PGRST200` — relationship not found**: FK faltante en la DB (backup antiguo). Verificar con `SELECT conname FROM pg_constraint WHERE conrelid = 'tabla'::regclass AND contype = 'f'`. Agregar el FK faltante y ejecutar `NOTIFY pgrst, 'reload schema'`.
-- **`42703` — column does not exist**: columna agregada en una migración posterior al backup. Ejemplo: `project_id` en tasks → `ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS project_id uuid REFERENCES public.projects(id) ON DELETE SET NULL`.
-- **RLS silencioso**: Supabase retorna array vacío (no error) en SELECT bloqueado. Verificar con service_role.
-- **Flash de tema**: el `<script dangerouslySetInnerHTML>` está en `<head>` de `app/layout.tsx`. No moverlo a `<body>` ni a `useEffect` — React 19 / Next.js 16 lanza warning si está en `<body>`.
-- **Hydration mismatch en theme toggle**: el botón en `topbar.tsx` tiene `suppressHydrationWarning` porque el servidor no conoce el tema del cliente.
-- **HMAC rechazado**: las firmas tienen ventana de 5 minutos. Verificar que `EMBED_INTERNAL_SECRET` coincida entre firmante y verificador.
-- **Cookies de auth perdidas en middleware**: `middleware.ts` debe devolver `supabaseResponse` — nunca `NextResponse.next()`.
-- **Ollama no responde**: solo cuando `CHAT_PROVIDER=ollama`. Los embeddings usan Voyage AI, no Ollama.
+- **Login/E2E con `Credenciales invalidas` aunque el usuario sea correcto**: revisar si el proyecto de Supabase esta pausado. Restaurar en Supabase Dashboard, esperar a que Auth/Database/Realtime estén activos, verificar `.env.local` y correr `npm run test:e2e`.
+- **`cookies() should be awaited`**: `cookies()` es async — siempre `await cookies()`. Aplica a `createClient()` del servidor también (es async en Next.js 16).
+- **`PGRST200` — relationship not found**: FK faltante (backup antiguo). Verificar con `SELECT conname FROM pg_constraint WHERE conrelid = 'tabla'::regclass AND contype = 'f'`. Agregar el FK y ejecutar `NOTIFY pgrst, 'reload schema'`.
+- **`42703` — column does not exist**: columna agregada en migración posterior. Ejemplo: `project_id` en tasks → `ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS project_id uuid REFERENCES public.projects(id) ON DELETE SET NULL`.
+- **RLS silencioso**: Supabase retorna array vacío (no error) en SELECT bloqueado. Verificar con service_role si la fila existe.
+- **Flash de tema**: el `<script dangerouslySetInnerHTML>` está en `<head>` de `app/layout.tsx`. No moverlo a `<body>` — React 19 lanza warning.
+- **Hydration mismatch en topbar**: el botón tema tiene `suppressHydrationWarning` porque servidor no sabe el tema del cliente.
+- **HMAC rechazado**: las firmas son válidas 5 minutos. Verificar `EMBED_INTERNAL_SECRET` coincida entre firmante y verificador; revisar relojes.
+- **Cookies auth perdidas en middleware**: `middleware.ts` DEBE devolver `supabaseResponse` — nunca `NextResponse.next()`.
+- **"This page couldn't load" intermitente (típicamente tras inactividad)**: Supabase free-tier se pausa y tarda en despertar; sin timeout, `supabase.auth.getUser()` en `middleware.ts` cuelga la navegación indefinidamente. Mitigado con `Promise.race` (5s) que trata timeout como no-autenticado y redirige a `/login` en vez de colgar. No evita que Supabase se pause — solo evita que el navegador se quede sin respuesta.
+- **Ollama no responde**: solo cuando `CHAT_PROVIDER=ollama`. Los embeddings usan Voyage AI, no Ollama; el chat puede caer a Claude Haiku con `ANTHROPIC_API_KEY`.
+- **Project no sincroniza entre tabs**: `ActiveProjectProvider` usa `storage` event listener. Si bug, revisar que `useEffect` tenga dependencia `[]` (una sola vez al montar).
 
 ## CI/CD y deploy
 
@@ -244,4 +285,4 @@ SENTRY_AUTH_TOKEN=
 | `deploy-production` | merge a `main` (CI verde) | vercel pull → vercel build --prod → vercel deploy --prebuilt --prod |
 
 **Secrets requeridos en GitHub**:
-`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GROQ_API_KEY`, `VOYAGE_API_KEY`, `EMBED_INTERNAL_SECRET`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`, `LHCI_GITHUB_APP_TOKEN`
+`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DEEPSEEK_API_KEY`, `VOYAGE_API_KEY`, `EMBED_INTERNAL_SECRET`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`, `LHCI_GITHUB_APP_TOKEN`

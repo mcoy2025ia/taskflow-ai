@@ -116,6 +116,7 @@ export const TASK_TOOLS: ToolDefinition[] = [
 interface ToolContext {
   supabase: SupabaseClient<Database>
   userId: string
+  projectId?: string | null
 }
 
 export async function executeTool(
@@ -123,19 +124,24 @@ export async function executeTool(
   args: Record<string, unknown>,
   ctx: ToolContext
 ): Promise<string> {
-  const { supabase, userId } = ctx
+  const { supabase, userId, projectId = null } = ctx
 
   switch (name) {
     case 'create_task': {
       // Calcular posición: al final de la columna
       const status = ((args.status as string) ?? 'todo') as 'todo' | 'in_progress' | 'done'
-      const { data: maxPos } = await supabase
+      let posQuery = supabase
         .from('tasks')
         .select('position')
-        .eq('user_id', userId)
         .eq('status', status)
         .order('position', { ascending: false })
         .limit(1)
+
+      posQuery = projectId
+        ? posQuery.eq('project_id', projectId)
+        : posQuery.eq('user_id', userId).is('project_id', null)
+
+      const { data: maxPos } = await posQuery
         .single()
 
       const position = maxPos ? maxPos.position + 1000 : 1000
@@ -144,6 +150,7 @@ export async function executeTool(
         .from('tasks')
         .insert({
           user_id:     userId,
+          project_id:  projectId,
           title:       args.title as string,
           description: (args.description as string) ?? null,
           status:      status as 'todo' | 'in_progress' | 'done',
@@ -173,11 +180,16 @@ export async function executeTool(
 
       if (Object.keys(updates).length === 0) return 'No se proporcionaron campos para actualizar.'
 
-      const { error } = await supabase
+      let updateQuery = supabase
         .from('tasks')
         .update(updates)
         .eq('id', taskId)
-        .eq('user_id', userId)
+
+      updateQuery = projectId
+        ? updateQuery.eq('project_id', projectId)
+        : updateQuery.eq('user_id', userId).is('project_id', null)
+
+      const { error } = await updateQuery
 
       if (error) return `Error al actualizar la tarea: ${error.message}`
       return `Tarea ${taskId} actualizada correctamente.`
@@ -187,22 +199,32 @@ export async function executeTool(
       const taskId = args.task_id as string
       const newStatus = args.status as 'todo' | 'in_progress' | 'done'
 
-      const { data: maxPos } = await supabase
+      let posQuery = supabase
         .from('tasks')
         .select('position')
-        .eq('user_id', userId)
         .eq('status', newStatus)
         .order('position', { ascending: false })
         .limit(1)
+
+      posQuery = projectId
+        ? posQuery.eq('project_id', projectId)
+        : posQuery.eq('user_id', userId).is('project_id', null)
+
+      const { data: maxPos } = await posQuery
         .single()
 
       const position = maxPos ? maxPos.position + 1000 : 1000
 
-      const { error } = await supabase
+      let updateQuery = supabase
         .from('tasks')
         .update({ status: newStatus, position })
         .eq('id', taskId)
-        .eq('user_id', userId)
+
+      updateQuery = projectId
+        ? updateQuery.eq('project_id', projectId)
+        : updateQuery.eq('user_id', userId).is('project_id', null)
+
+      const { error } = await updateQuery
 
       if (error) return `Error al mover la tarea: ${error.message}`
       return `Tarea ${taskId} movida a "${newStatus}" correctamente.`
@@ -210,11 +232,16 @@ export async function executeTool(
 
     case 'delete_task': {
       const taskId = args.task_id as string
-      const { error } = await supabase
+      let deleteQuery = supabase
         .from('tasks')
         .delete()
         .eq('id', taskId)
-        .eq('user_id', userId)
+
+      deleteQuery = projectId
+        ? deleteQuery.eq('project_id', projectId)
+        : deleteQuery.eq('user_id', userId).is('project_id', null)
+
+      const { error } = await deleteQuery
 
       if (error) return `Error al eliminar la tarea: ${error.message}`
       return `Tarea ${taskId} eliminada correctamente.`
@@ -224,9 +251,12 @@ export async function executeTool(
       let query = supabase
         .from('tasks')
         .select('id, title, status, priority, due_date')
-        .eq('user_id', userId)
         .order('position', { ascending: true })
         .limit(10)
+
+      query = projectId
+        ? query.eq('project_id', projectId)
+        : query.eq('user_id', userId).is('project_id', null)
 
       if (args.status)   query = query.eq('status',   args.status   as 'todo' | 'in_progress' | 'done')
       if (args.priority) query = query.eq('priority', args.priority as 'low' | 'medium' | 'high')
@@ -246,13 +276,18 @@ export async function executeTool(
       const safeQuery = rawQuery.replace(/[%_\\]/g, '\\$&')
       const taskId = args.task_id as string | undefined
 
-      // Filtrar primero por las tareas del usuario para no depender solo de RLS
-      const { data: userTaskIds } = await supabase
+      // Filtrar primero por tareas dentro del scope actual para no depender solo de RLS.
+      let taskIdsQuery = supabase
         .from('tasks')
         .select('id')
-        .eq('user_id', userId)
 
-      const ids = (userTaskIds ?? []).map(t => t.id)
+      taskIdsQuery = projectId
+        ? taskIdsQuery.eq('project_id', projectId)
+        : taskIdsQuery.eq('user_id', userId).is('project_id', null)
+
+      const { data: scopedTaskIds } = await taskIdsQuery
+
+      const ids = (scopedTaskIds ?? []).map(t => t.id)
       if (ids.length === 0) return 'No se encontraron comentarios con esa búsqueda.'
 
       let dbQuery = supabase

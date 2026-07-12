@@ -3,19 +3,8 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect, useTransition, type ReactNode, type ElementType } from 'react'
-import {
-  LayoutDashboard,
-  MessageSquareText,
-  BarChart2,
-  Settings,
-  Cpu,
-  LogOut,
-  Zap,
-  X,
-  Plus,
-  Trash2,
-} from 'lucide-react'
+import { useState, useEffect, useTransition, type ElementType } from 'react'
+import { LayoutDashboard, MessageSquareText, ChartNoAxesCombined, LogOut, Zap, X, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { signOut } from '@/actions/auth.actions'
 import { getChatSessions, deleteChatSession, type ChatSessionSummary } from '@/actions/chat.actions'
@@ -31,40 +20,10 @@ interface SidebarProps {
   onClose?: () => void
 }
 
-const NAV_MAIN = [
-  {
-    href: '/board',
-    label: 'Tablero',
-    icon: LayoutDashboard,
-    testId: 'nav-board',
-  },
-  {
-    href: '/chat',
-    label: 'Asistente IA',
-    icon: MessageSquareText,
-    testId: 'nav-chat',
-  },
-  {
-    href: '/analytics',
-    label: 'Analítica',
-    icon: BarChart2,
-    testId: 'nav-analytics',
-  },
-]
-
-const NAV_SETTINGS = [
-  {
-    href: '/settings',
-    label: 'Preferencias',
-    icon: Settings,
-    testId: 'nav-settings',
-  },
-  {
-    href: '/settings/ai',
-    label: 'Modelos IA',
-    icon: Cpu,
-    testId: 'nav-ai',
-  },
+const NAV_ITEMS = [
+  { href: '/board', label: 'Tablero', icon: LayoutDashboard, testId: 'nav-board' },
+  { href: '/chat', label: 'Asistente IA', icon: MessageSquareText, testId: 'nav-chat' },
+  { href: '/analytics', label: 'Analítica', icon: ChartNoAxesCombined, testId: 'nav-analytics' },
 ]
 
 export function Sidebar({ userName, userEmail, userInitials, avatarUrl, isOpen = false, onClose }: SidebarProps) {
@@ -80,96 +39,74 @@ export function Sidebar({ userName, userEmail, userInitials, avatarUrl, isOpen =
 
   return (
     <aside className={cn(
-      'fixed inset-y-0 left-0 z-40 md:static',
-      'w-[220px] flex-shrink-0 flex flex-col apple-glass bg-background/60 border-r border-border/40 h-full',
-      'transition-transform duration-300 ease-in-out md:transition-none',
-      isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      'fixed inset-y-0 left-0 z-40 flex h-full w-[248px] flex-shrink-0 flex-col border-r border-border/70 bg-card/92 backdrop-blur-xl md:static',
+      'transition-transform duration-300 ease-[cubic-bezier(.16,1,.3,1)] md:transition-none',
+      isOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
     )}>
-      {/* Brand */}
-      <div className="flex items-center justify-between gap-2.5 px-4 py-[18px] border-b border-border/50">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-[7px] bg-gradient-to-br from-indigo-600 to-violet-500 flex items-center justify-center flex-shrink-0">
-            <Zap size={14} className="text-white" strokeWidth={2.5} />
+      <div className="flex h-16 items-center justify-between border-b border-border/60 px-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] bg-foreground text-background shadow-sm">
+            <Zap size={16} fill="currentColor" strokeWidth={2.25} />
           </div>
-          <ProjectSwitcher />
+          <div className="min-w-0">
+            <p className="mb-0.5 text-[9px] font-bold uppercase text-muted-foreground">TaskFlow</p>
+            <ProjectSwitcher />
+          </div>
         </div>
-        <button
-          onClick={onClose}
-          className="md:hidden w-7 h-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-        >
-          <X size={15} />
+        <button onClick={onClose} className="focus-ring flex h-8 w-8 items-center justify-center rounded-[8px] text-muted-foreground hover:bg-muted hover:text-foreground md:hidden" aria-label="Cerrar navegación">
+          <X size={16} />
         </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5 overflow-y-auto">
-        <NavSection label="Principal">
-          {NAV_MAIN.map(item => (
+      <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-5">
+        <p className="mb-2 px-2 text-[10px] font-bold uppercase text-muted-foreground/70">Organizar</p>
+        <div className="space-y-1">
+          {NAV_ITEMS.map(item => (
             <NavItem
               key={item.href}
               {...item}
-              isActive={pathname === item.href || (item.href === '/chat' && pathname.startsWith('/chat'))}
+              isActive={pathname === item.href || pathname.startsWith(`${item.href}/`) || (item.href === '/chat' && pathname.startsWith('/chat'))}
               onClick={onClose}
             />
           ))}
-          {pathname.startsWith('/chat') && <ChatSessions currentPath={pathname} />}
-        </NavSection>
+        </div>
 
-        <NavSection label="Configuración">
-          {NAV_SETTINGS.map(item => (
-            <NavItem
-              key={item.href}
-              {...item}
-              isActive={pathname.startsWith(item.href)}
-              onClick={onClose}
-            />
-          ))}
-        </NavSection>
+        {pathname.startsWith('/chat') && <ChatSessions currentPath={pathname} />}
+
+        <div className="mt-auto pt-6">
+          <div className="material-subtle rounded-[8px] p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[11px] font-semibold">Asistente conectado</p>
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </div>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">Groq + búsqueda semántica disponibles en tu proyecto.</p>
+          </div>
+        </div>
       </nav>
 
-      {/* User footer */}
-      <div className="px-2 py-2 border-t border-border/50">
-        <div className="flex items-center gap-2.5 px-2.5 py-2 rounded-[7px] hover:bg-muted/60 transition-colors group">
-          {/* Avatar */}
+      <div className="border-t border-border/60 p-3">
+        <div className="group flex items-center gap-2.5 rounded-[8px] p-2 hover:bg-muted/70">
           {avatarUrl ? (
-            <div className="relative w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
-              <Image 
-                src={avatarUrl} 
-                alt={userName}
-                width={28}  // ✅ Ajustado a w-7 (28px)
-                height={28} // ✅ Ajustado a h-7 (28px)
-                className="object-cover"
-              />
+            <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-full ring-1 ring-border">
+              <Image src={avatarUrl} alt={userName} width={32} height={32} className="h-full w-full object-cover" />
             </div>
           ) : (
-            <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-950/50 flex items-center justify-center flex-shrink-0">
-              <span className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
-                {userInitials}
-              </span>
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/15">
+              <span className="text-[11px] font-bold text-primary">{userInitials}</span>
             </div>
           )}
-
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium truncate leading-none">{userName}</p>
-            <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-              {userEmail}
-            </p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold">{userName}</p>
+            <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{userEmail}</p>
           </div>
-
           <button
             onClick={handleLogout}
             disabled={isPending}
             data-testid="logout-btn"
             title="Cerrar sesión"
-            className={cn(
-              'w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0',
-              'border border-border/50 text-muted-foreground',
-              'opacity-0 group-hover:opacity-100 transition-all',
-              'hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30',
-              isPending && 'opacity-50 cursor-not-allowed'
-            )}
+            className="focus-ring flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] text-muted-foreground opacity-70 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <LogOut size={12} />
+            <LogOut size={14} />
           </button>
         </div>
       </div>
@@ -181,9 +118,7 @@ function ChatSessions({ currentPath }: { currentPath: string }) {
   const [sessions, setSessions] = useState<ChatSessionSummary[]>([])
   const [, startTransition] = useTransition()
 
-  function loadSessions() {
-    getChatSessions().then(setSessions)
-  }
+  function loadSessions() { getChatSessions().then(setSessions) }
 
   useEffect(() => {
     loadSessions()
@@ -197,50 +132,27 @@ function ChatSessions({ currentPath }: { currentPath: string }) {
     startTransition(async () => {
       const result = await deleteChatSession(sessionId)
       if (result.success) {
-        setSessions(prev => prev.filter(s => s.id !== sessionId))
-        // If deleting current session, go to fresh chat
-        if (currentPath.includes(sessionId)) {
-          window.location.href = '/chat'
-        }
-      } else {
-        toast.error('No se pudo eliminar la conversación')
-      }
+        setSessions(prev => prev.filter(session => session.id !== sessionId))
+        if (currentPath.includes(sessionId)) window.location.href = '/chat'
+      } else toast.error('No se pudo eliminar la conversación')
     })
   }
 
   if (!sessions.length) return null
 
   return (
-    <div className="mt-1 ml-2 border-l border-border/40 pl-2 flex flex-col gap-0.5">
-      <Link
-        href="/chat"
-        className="flex items-center gap-1.5 px-2 py-1.5 rounded-[6px] text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors group"
-      >
-        <Plus size={11} />
-        <span>Nueva conversación</span>
+    <div className="ml-4 mt-2 space-y-1 border-l border-border/70 pl-3">
+      <Link href="/chat" className="flex items-center gap-2 rounded-[7px] px-2 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted/70 hover:text-foreground">
+        <Plus size={12} /> Nueva conversación
       </Link>
-      {sessions.slice(0, 6).map(s => {
-        const isActive = currentPath.includes(s.id)
+      {sessions.slice(0, 5).map(session => {
+        const isActive = currentPath.includes(session.id)
         return (
-          <div key={s.id} className={cn(
-            'flex items-center gap-1 px-2 py-1.5 rounded-[6px] group transition-colors',
-            isActive ? 'bg-indigo-50 dark:bg-indigo-950/40' : 'hover:bg-muted/50'
-          )}>
-            <Link
-              href={`/chat?session_id=${s.id}`}
-              className={cn(
-                'flex-1 truncate text-xs leading-none',
-                isActive ? 'text-indigo-700 dark:text-indigo-300 font-medium' : 'text-muted-foreground hover:text-foreground'
-              )}
-              title={s.title}
-            >
-              {s.title}
+          <div key={session.id} className={cn('group/session flex items-center gap-1 rounded-[7px] px-2 py-1.5', isActive ? 'bg-primary/[0.08]' : 'hover:bg-muted/60')}>
+            <Link href={`/chat?session_id=${session.id}`} className={cn('min-w-0 flex-1 truncate text-[11px]', isActive ? 'font-semibold text-primary' : 'text-muted-foreground')} title={session.title}>
+              {session.title}
             </Link>
-            <button
-              onClick={(e) => handleDelete(e, s.id)}
-              className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/60 hover:text-destructive"
-              title="Eliminar conversación"
-            >
+            <button onClick={event => handleDelete(event, session.id)} className="text-muted-foreground opacity-0 hover:text-destructive group-hover/session:opacity-100" title="Eliminar conversación">
               <Trash2 size={11} />
             </button>
           </div>
@@ -250,51 +162,20 @@ function ChatSessions({ currentPath }: { currentPath: string }) {
   )
 }
 
-function NavSection({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="mb-2">
-      <p className="text-[10px] font-medium text-muted-foreground/70 px-2 py-1.5 uppercase tracking-widest">
-        {label}
-      </p>
-      {children}
-    </div>
-  )
-}
-
-function NavItem({
-  href,
-  label,
-  icon: Icon,
-  isActive,
-  testId,
-  onClick,
-}: {
-  href: string
-  label: string
-  icon: ElementType
-  isActive: boolean
-  testId: string
-  onClick?: () => void
-}) {
+function NavItem({ href, label, icon: Icon, isActive, testId, onClick }: { href: string; label: string; icon: ElementType; isActive: boolean; testId: string; onClick?: () => void }) {
   return (
     <Link
       href={href}
       data-testid={testId}
       onClick={onClick}
       className={cn(
-        'flex items-center gap-2.5 px-2.5 py-[7px] rounded-[7px]',
-        'text-sm transition-all duration-150',
-        isActive
-          ? 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-medium'
-          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+        'focus-ring group relative flex h-10 items-center gap-3 rounded-[8px] px-3 text-[13px] font-medium',
+        isActive ? 'bg-foreground text-background shadow-sm' : 'text-muted-foreground hover:bg-muted/80 hover:text-foreground'
       )}
     >
-      <Icon
-        size={15}
-        strokeWidth={isActive ? 2 : 1.75}
-        className={cn(isActive ? 'text-indigo-600 dark:text-indigo-400' : '')}
-      />
-      <span className="leading-none">{label}</span>
+      <Icon size={16} strokeWidth={isActive ? 2.2 : 1.8} />
+      <span>{label}</span>
+      {isActive && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary-foreground/80" />}
     </Link>
   )
 }

@@ -40,7 +40,7 @@ function makeChain(result: ChainResult) {
       Promise.resolve(result).then(onFulfilled),
     single: vi.fn().mockResolvedValue(result),
   }
-  for (const m of ['select', 'eq', 'order', 'limit', 'rpc']) {
+  for (const m of ['select', 'eq', 'is', 'in', 'order', 'limit', 'rpc']) {
     chain[m] = vi.fn(() => chain)
   }
   return chain
@@ -151,7 +151,7 @@ describe('searchTasksByQuery', () => {
   it('runs pure semantic search when there is no structural intent', async () => {
     const semanticTasks = [makeResult({ task_id: 'sem-1' })]
     mockSupabase(
-      [],
+      [makeChain({ data: [{ id: 'sem-1' }], error: null })],
       { data: semanticTasks, error: null }
     )
     mockedRerank.mockResolvedValue([{ index: 0, relevance_score: 0.9 }])
@@ -180,7 +180,10 @@ describe('searchTasksByQuery', () => {
 
   it('returns candidates directly when there are <= RERANK_FINAL (5) results', async () => {
     const tasks = [makeResult({ task_id: 'only-one' })]
-    mockSupabase([], { data: tasks, error: null })
+    mockSupabase(
+      [makeChain({ data: [{ id: 'only-one' }], error: null })],
+      { data: tasks, error: null }
+    )
     // rerank should NOT be called
 
     await searchTasksByQuery('anything', { userId: 'u1' })
@@ -190,7 +193,10 @@ describe('searchTasksByQuery', () => {
   it('falls back gracefully when rerank throws', async () => {
     // Return 6+ candidates so rerank is attempted
     const manyTasks = Array.from({ length: 6 }, (_, i) => makeResult({ task_id: `t${i}` }))
-    mockSupabase([], { data: manyTasks, error: null })
+    mockSupabase(
+      [makeChain({ data: manyTasks.map(task => ({ id: task.task_id })), error: null })],
+      { data: manyTasks, error: null }
+    )
     mockedRerank.mockRejectedValue(new Error('Voyage unavailable'))
 
     const result = await searchTasksByQuery('query', { userId: 'u1' })

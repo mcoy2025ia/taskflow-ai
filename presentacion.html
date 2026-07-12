@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>TaskFlow v3 — Presentación Ejecutiva</title>
+<style>
+  /* ══ TOKENS ══════════════════════════════════════════════ */
+  :root {
+    --navy: #051C2C;
+    --blue: #2251FF;
+    --gray: #6B7280;
+    --gray-light: #9CA3AF;
+    --bg-soft: #F7F9FB;
+    --strip: #F1F4F8;
+    --border: #E5E7EB;
+    --green: #10B981;
+    --red: #C0392B;
+    --font: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #DFE5EC;
+    font-family: var(--font);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* ══ VIEWPORT + DECK ═════════════════════════════════════ */
+  #viewport {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #deck {
+    width: 1280px;
+    height: 720px;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    width: 1280px;
+    height: 720px;
+    background: #FFFFFF;
+    box-shadow: 0 12px 40px rgba(5,28,44,0.16);
+    display: none;
+    flex-direction: column;
+    padding: 44px 64px 0;
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ══ ELEMENTOS COMUNES ═══════════════════════════════════ */
+  .kicker {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    color: var(--gray);
+    text-transform: uppercase;
+  }
+  h2 {
+    margin-top: 12px;
+    font-size: 29px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    max-width: 1100px;
+  }
+  .rule { width: 110px; height: 4px; background: var(--blue); margin: 16px 0 0; }
+  .body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 26px 0 18px; }
+  .sowhat {
+    margin: 0 -64px;
+    background: var(--strip);
+    padding: 15px 64px;
+    font-size: 14.5px;
+    color: var(--navy);
+    line-height: 1.5;
+  }
+  .sowhat strong { color: var(--blue); font-weight: 700; }
+
+  /* ══ S1 · PORTADA ════════════════════════════════════════ */
+  .cover { padding: 0; display: none; grid-template-columns: 54% 46%; }
+  .cover.active { display: grid; }
+  .cover-text { padding: 60px 24px 52px 68px; display: flex; flex-direction: column; }
+  .cover-text .title-block { margin-top: auto; }
+  .cover h1 { font-size: 82px; font-weight: 800; color: var(--navy); letter-spacing: -0.02em; line-height: 1; }
+  .cover .rule { width: 120px; margin: 26px 0; }
+  .cover .action-msg { font-size: 26px; font-weight: 600; color: var(--navy); line-height: 1.35; max-width: 560px; }
+  .cover .subtitle { margin-top: 20px; font-size: 15px; color: var(--gray); line-height: 1.6; max-width: 540px; }
+  .cover .footer { margin-top: auto; padding-top: 36px; font-size: 12.5px; color: var(--gray-light); letter-spacing: 0.04em; }
+  .cover-art { display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #FFF 0%, var(--bg-soft) 100%); }
+
+  /* ══ S2 · 3 TARJETAS ═════════════════════════════════════ */
+  .cards3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 22px; flex: 1; align-content: center; }
+  .card { border: 1px solid var(--border); border-radius: 10px; padding: 26px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .card .num { font-size: 46px; font-weight: 800; color: var(--blue); line-height: 1; }
+  .card h3 { font-size: 16.5px; font-weight: 700; color: var(--navy); letter-spacing: 0.02em; }
+  .card p { font-size: 13.5px; color: var(--gray); line-height: 1.6; }
+
+  /* ══ S3 · STAT + BULLETS ═════════════════════════════════ */
+  .split-30-70 { display: grid; grid-template-columns: 30% 1fr; gap: 40px; flex: 1; align-items: center; }
+  .stat-panel { background: #EDF1F7; border-radius: 12px; padding: 44px 30px; text-align: center; }
+  .stat-panel .big { font-size: 74px; font-weight: 800; color: var(--blue); line-height: 1; letter-spacing: -0.02em; }
+  .stat-panel .cap { margin-top: 14px; font-size: 14px; color: var(--gray); line-height: 1.5; }
+  .bullets { display: flex; flex-direction: column; gap: 20px; }
+  .bullet { display: flex; gap: 14px; align-items: flex-start; }
+  .bullet .sq { width: 10px; height: 10px; background: var(--blue); margin-top: 6px; flex-shrink: 0; }
+  .bullet p { font-size: 15px; color: var(--gray); line-height: 1.55; }
+  .bullet strong { color: var(--navy); font-weight: 700; }
+
+  /* ══ S4 · 3 COLUMNAS PILAR ═══════════════════════════════ */
+  .pillars { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; flex: 1; align-content: center; position: relative; }
+  .pillar { text-align: left; padding-top: 10px; }
+  .pillar .icon { height: 58px; display: flex; align-items: center; }
+  .pillar h3 { font-size: 16.5px; font-weight: 700; color: var(--navy); letter-spacing: 0.03em; margin: 18px 0 12px; }
+  .pillar p { font-size: 13.5px; color: var(--gray); line-height: 1.65; }
+  .pillar-line { position: absolute; top: 78px; left: 0; right: 0; height: 2px; background: var(--blue); opacity: 0.5; }
+
+  /* ══ S5 · CAPAS ══════════════════════════════════════════ */
+  .arch { display: grid; grid-template-columns: 1fr 300px; gap: 34px; flex: 1; align-items: center; }
+  .layers { display: flex; flex-direction: column; }
+  .layer { border: 2px solid var(--navy); border-radius: 8px; padding: 14px 22px; background: #FFF; }
+  .layer h4 { font-size: 14.5px; font-weight: 700; color: var(--navy); letter-spacing: 0.04em; }
+  .layer p { font-size: 12.5px; color: var(--gray); margin-top: 3px; }
+  .layer-arrow { text-align: center; color: var(--blue); font-size: 15px; line-height: 1.4; font-weight: 700; }
+  .ai-panel { border: 2px dashed var(--blue); border-radius: 10px; padding: 22px; position: relative; }
+  .ai-panel h4 { font-size: 13px; font-weight: 700; color: var(--blue); letter-spacing: 0.08em; margin-bottom: 14px; }
+  .ai-item { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .ai-item:last-child { border-bottom: none; }
+  .ai-item b { display: block; font-size: 13.5px; color: var(--navy); }
+  .ai-item span { font-size: 12px; color: var(--gray); }
+
+  /* ══ S6 · FLUJO AGENTE ═══════════════════════════════════ */
+  .flow { display: flex; align-items: stretch; gap: 8px; flex: 1; align-items: center; }
+  .fnode { border: 2px solid var(--navy); border-radius: 8px; padding: 14px 12px; flex: 1; background: #FFF; display: flex; flex-direction: column; justify-content: center; min-height: 150px; }
+  .fnode h5 { font-size: 12px; font-weight: 800; color: var(--blue); letter-spacing: 0.05em; margin-bottom: 6px; }
+  .fnode p { font-size: 12px; color: var(--navy); line-height: 1.45; }
+  .fnode.gate { border-color: var(--red); background: #FDF6F5; }
+  .fnode.gate h5 { color: var(--red); }
+  .farrow { color: var(--navy); font-size: 20px; font-weight: 700; align-self: center; flex-shrink: 0; }
+  .tools-ribbon { margin-top: 20px; background: var(--strip); border-radius: 8px; padding: 12px 20px; font-family: 'Consolas', monospace; font-size: 13px; color: var(--navy); text-align: center; }
+
+  /* ══ S7 · EMBUDO RAG ═════════════════════════════════════ */
+  .rag { display: flex; align-items: center; gap: 10px; flex: 1; }
+  .rag-col { display: flex; flex-direction: column; gap: 12px; justify-content: center; }
+  .rnode { border: 2px solid var(--navy); border-radius: 8px; padding: 13px 14px; background: #FFF; }
+  .rnode h5 { font-size: 11.5px; font-weight: 800; color: var(--blue); letter-spacing: 0.04em; margin-bottom: 5px; }
+  .rnode p { font-size: 11.5px; color: var(--navy); line-height: 1.45; }
+  .rnode.final { border-color: var(--blue); background: #E8EEFF; }
+  .rag-callout { margin-top: 18px; font-size: 13px; color: var(--gray); line-height: 1.5; border-left: 3px solid var(--blue); padding-left: 14px; }
+
+  /* ══ S8 · TABLA SEGURIDAD ════════════════════════════════ */
+  .sec { display: grid; grid-template-columns: 64px 1fr; gap: 30px; flex: 1; align-items: center; }
+  .shields { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  table.mck { width: 100%; border-collapse: collapse; }
+  table.mck th { text-align: left; font-size: 12px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.08em; padding: 0 14px 10px; border-bottom: 2px solid var(--navy); }
+  table.mck td { padding: 12px 14px; font-size: 13px; color: var(--gray); line-height: 1.5; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.mck td.lead { font-weight: 700; color: var(--navy); font-size: 12.5px; letter-spacing: 0.05em; white-space: nowrap; }
+
+  /* ══ S9 · KPIs OLIST ═════════════════════════════════════ */
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .kpi { text-align: center; padding: 16px 8px; border-top: 3px solid var(--blue); background: var(--bg-soft); border-radius: 0 0 8px 8px; }
+  .kpi .n { font-size: 46px; font-weight: 800; color: var(--blue); line-height: 1; }
+  .kpi .c { margin-top: 8px; font-size: 12.5px; color: var(--gray); }
+  .olist-mid { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; margin-top: 26px; }
+  .olist-block h4 { font-size: 13px; font-weight: 700; color: var(--navy); letter-spacing: 0.08em; margin-bottom: 12px; }
+  .olist-block p { font-size: 13px; color: var(--gray); line-height: 1.6; }
+  .chevrons { display: flex; margin-top: 14px; }
+  .chev { flex: 1; background: var(--navy); color: #FFF; font-size: 11px; font-weight: 600; padding: 9px 4px 9px 14px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%); text-align: center; }
+  .chev:nth-child(even) { background: var(--blue); }
+  .rolebar { display: flex; height: 42px; border-radius: 6px; overflow: hidden; margin-top: 14px; }
+  .rseg { display: flex; align-items: center; justify-content: center; color: #FFF; font-size: 10.5px; font-weight: 600; text-align: center; line-height: 1.2; padding: 0 4px; }
+  .olist-callout { margin-top: 22px; font-size: 13px; color: var(--gray); line-height: 1.55; border-left: 3px solid var(--green); padding-left: 14px; }
+
+  /* ══ S10 · PIPELINE CI ═══════════════════════════════════ */
+  .gates { display: flex; align-items: center; gap: 8px; }
+  .gate-box { flex: 1; border: 2px solid var(--navy); border-radius: 8px; padding: 14px 10px; text-align: center; min-height: 92px; display: flex; flex-direction: column; justify-content: center; }
+  .gate-box h5 { font-size: 12.5px; font-weight: 800; color: var(--navy); }
+  .gate-box p { font-size: 11.5px; color: var(--gray); margin-top: 5px; line-height: 1.4; }
+  .gate-final { flex: 0.9; background: var(--green); border-radius: 10px; padding: 18px 12px; text-align: center; color: #FFF; font-weight: 800; font-size: 14px; letter-spacing: 0.04em; }
+  .ci-bullets { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 40px; margin-top: 30px; }
+
+  /* ══ S11 · TABLA INCIDENTES ══════════════════════════════ */
+  .dot-red { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--red); margin-right: 10px; }
+  .check-g { color: var(--green); font-weight: 800; margin-right: 8px; }
+  td .pat { font-weight: 800; color: var(--navy); font-size: 12px; letter-spacing: 0.05em; }
+
+  /* ══ S12 · CIERRE ════════════════════════════════════════ */
+  .close-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; flex: 1; align-items: center; }
+  .timeline { position: relative; padding-left: 44px; }
+  .timeline::before { content: ''; position: absolute; left: 15px; top: 10px; bottom: 10px; width: 2px; background: var(--border); }
+  .tl-item { position: relative; padding: 11px 0; }
+  .tl-item .n { position: absolute; left: -44px; top: 8px; width: 32px; height: 32px; border-radius: 50%; background: var(--blue); color: #FFF; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  .tl-item p { font-size: 13.5px; color: var(--gray); line-height: 1.5; }
+  .tl-item strong { color: var(--navy); }
+  .quote { font-size: 23px; font-weight: 700; color: var(--navy); line-height: 1.45; }
+  .quote::before { content: '“'; color: var(--blue); font-size: 42px; line-height: 0; vertical-align: -12px; margin-right: 4px; }
+  .cta { display: inline-block; margin-top: 30px; background: var(--blue); color: #FFF; font-weight: 700; font-size: 15px; padding: 15px 28px; border-radius: 8px; letter-spacing: 0.02em; }
+  .close-footer { margin-top: 26px; font-size: 12px; color: var(--gray-light); }
+
+  /* ══ NAVEGACIÓN ══════════════════════════════════════════ */
+  #hud {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 16px; z-index: 50;
+    background: rgba(5,28,44,0.85); color: #FFF; border-radius: 30px;
+    padding: 8px 18px; font-size: 13px; backdrop-filter: blur(8px);
+  }
+  #hud button { background: none; border: none; color: #FFF; font-size: 17px; cursor: pointer; padding: 2px 8px; }
+  #hud button:hover { color: #93C5FD; }
+  #hud .hint-key { font-size: 11px; color: #94A3B8; }
+
+  /* ══ PRINT → PDF ═════════════════════════════════════════ */
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    body { background: #FFF; overflow: visible; height: auto; }
+    #viewport { display: block; height: auto; }
+    #deck { width: 1280px; height: auto; }
+    .slide, .cover { display: flex !important; position: static; page-break-after: always; box-shadow: none; }
+    .cover { display: grid !important; }
+    #hud { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="viewport">
+<div id="deck">
+
+<!-- ══ 1 · PORTADA ══ -->
+<section class="slide cover active">
+  <div class="cover-text">
+    <div class="kicker">MCOY AI + Data Strategy · Datapath Bootcamp</div>
+    <div class="title-block">
+      <h1>TaskFlow v3</h1>
+      <div class="rule"></div>
+      <div class="action-msg">La gestión de proyectos de datos deja de ser un tablero pasivo y se convierte en un agente que ejecuta.</div>
+      <div class="subtitle">Plataforma SaaS multi-tenant con IA nativa: Kanban colaborativo en tiempo real · Agente RAG con tool calling · Analítica ejecutiva generada por LLM</div>
+    </div>
+    <div class="footer">Next.js 16 · Supabase · DeepSeek · Voyage AI — Julio 2026</div>
+  </div>
+  <div class="cover-art">
+    <svg width="500" height="520" viewBox="0 0 540 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="30" y="120" width="110" height="320" rx="10" stroke="#051C2C" stroke-width="2" fill="#FFFFFF"/>
+      <rect x="44" y="140" width="82" height="10" rx="5" fill="#051C2C" opacity="0.85"/>
+      <rect x="44" y="168" width="82" height="52" rx="6" fill="#F0F4FA" stroke="#C7D2E4" stroke-width="1.5"/>
+      <rect x="44" y="232" width="82" height="52" rx="6" fill="#F0F4FA" stroke="#C7D2E4" stroke-width="1.5"/>
+      <rect x="44" y="296" width="82" height="52" rx="6" fill="#F0F4FA" stroke="#C7D2E4" stroke-width="1.5"/>
+      <rect x="165" y="120" width="110" height="320" rx="10" stroke="#051C2C" stroke-width="2" fill="#FFFFFF"/>
+      <rect x="179" y="140" width="82" height="10" rx="5" fill="#051C2C" opacity="0.85"/>
+      <rect x="179" y="168" width="82" height="52" rx="6" fill="#E8EEFF" stroke="#2251FF" stroke-width="1.5"/>
+      <rect x="179" y="232" width="82" height="52" rx="6" fill="#F0F4FA" stroke="#C7D2E4" stroke-width="1.5"/>
+      <rect x="300" y="120" width="110" height="320" rx="10" stroke="#051C2C" stroke-width="2" fill="#FFFFFF"/>
+      <rect x="314" y="140" width="82" height="10" rx="5" fill="#051C2C" opacity="0.85"/>
+      <rect x="314" y="168" width="82" height="52" rx="6" fill="#E8EEFF" stroke="#2251FF" stroke-width="1.5"/>
+      <path d="M126 194 C 200 90, 380 90, 478 262" stroke="#2251FF" stroke-width="2" fill="none" opacity="0.55"/>
+      <path d="M261 194 C 330 140, 420 160, 478 268" stroke="#2251FF" stroke-width="2" fill="none" opacity="0.75"/>
+      <path d="M396 194 C 440 210, 462 230, 478 274" stroke="#2251FF" stroke-width="2.5" fill="none"/>
+      <path d="M126 322 C 240 470, 400 430, 478 292" stroke="#2251FF" stroke-width="2" fill="none" opacity="0.4"/>
+      <circle cx="126" cy="194" r="5" fill="#2251FF"/>
+      <circle cx="261" cy="194" r="5" fill="#2251FF"/>
+      <circle cx="396" cy="194" r="5" fill="#2251FF"/>
+      <circle cx="126" cy="322" r="5" fill="#2251FF" opacity="0.6"/>
+      <circle cx="486" cy="278" r="34" fill="#10B981" opacity="0.12"/>
+      <circle cx="486" cy="278" r="22" fill="#10B981"/>
+      <path d="M478 278 L484 284 L495 271" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <text x="486" y="336" text-anchor="middle" font-family="Inter, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#051C2C" letter-spacing="0.08em">AGENTE</text>
+    </svg>
+  </div>
+</section>
+
+<!-- ══ 2 · RESUMEN EJECUTIVO ══ -->
+<section class="slide">
+  <div class="kicker">Resumen ejecutivo</div>
+  <h2>Tres mensajes: producto completo, IA con guardrails de producción y resiliencia probada con incidentes reales</h2>
+  <div class="rule"></div>
+  <div class="body">
+    <div class="cards3">
+      <div class="card">
+        <div class="num">01</div>
+        <h3>PRODUCTO COMPLETO, NO PROTOTIPO</h3>
+        <p>12 tablas con Row Level Security · 13 migraciones idempotentes · 6 herramientas de agente · CI/CD con 5 compuertas de calidad · presupuestos Lighthouse (LCP &lt; 2.5s).</p>
+      </div>
+      <div class="card">
+        <div class="num">02</div>
+        <h3>LA IA EJECUTA, NO SOLO CONVERSA</h3>
+        <p>El agente crea, mueve y elimina tareas en lenguaje natural sobre un pipeline RAG híbrido (intención + vectorial + reranking). Toda acción destructiva exige confirmación explícita del usuario.</p>
+      </div>
+      <div class="card">
+        <div class="num">03</div>
+        <h3>OPERACIÓN VALIDADA BAJO FUEGO</h3>
+        <p>4 incidentes reales de producción resueltos con patrones reutilizables, incluida una migración de proveedor LLM en ~1 hora sin tocar el parser del agente.</p>
+      </div>
+    </div>
+  </div>
+  <div class="sowhat"><strong>So what:</strong> el diferencial no es "usar IA" — es haberla llevado a producción con seguridad, costos y fallos controlados.</div>
+</section>
+
+<!-- ══ 3 · PROBLEMA ══ -->
+<section class="slide">
+  <div class="kicker">Contexto y problema</div>
+  <h2>Los equipos de datos pierden 20–30% de su capacidad en coordinación que ninguna herramienta genérica resuelve</h2>
+  <div class="rule"></div>
+  <div class="body">
+    <div class="split-30-70">
+      <div class="stat-panel">
+        <div class="big">20–30%</div>
+        <div class="cap">de la capacidad del equipo se consume en coordinación manual</div>
+      </div>
+      <div class="bullets">
+        <div class="bullet"><div class="sq"></div><p><strong>Información dispersa</strong> — el estado real del proyecto vive en tableros, chats y hojas de cálculo que nadie reconcilia; el PM lo reconstruye a mano cada semana.</p></div>
+        <div class="bullet"><div class="sq"></div><p><strong>Reportes manuales</strong> — los informes ejecutivos (avance, velocidad, riesgo de entrega) consumen horas de rol senior y quedan obsoletos al publicarse.</p></div>
+        <div class="bullet"><div class="sq"></div><p><strong>IA decorativa</strong> — las suites tradicionales añaden chatbots que describen el tablero pero no pueden actuar sobre él.</p></div>
+        <div class="bullet"><div class="sq"></div><p><strong>Multi-tenancy débil</strong> — compartir un proyecto con roles reales (owner / editor / viewer) suele exigir un plan enterprise.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="sowhat"><strong>So what:</strong> hay espacio para una herramienta donde tablero, agente y reporte comparten la misma fuente de verdad — y el agente tiene permiso de ejecutar.</div>
+</section>
+
+<!-- ══ 4 · SOLUCIÓN ══ -->
+<section class="slide">
+  <div class="kicker">La solución</div>
+  <h2>TaskFlow v3 integra tres capacidades sobre una sola fuente de verdad: ejecutar, razonar y reportar</h2>
+  <div class="rule"></div>
+  <div class="body">
+    <div class="pillars">
+      <div class="pillar-line"></div>
+      <div class="pillar">
+        <div class="icon">
+          <svg width="52" height="52" viewBox="0 0 52 52" fill="none"><rect x="4" y="8" width="12" height="36" rx="3" stroke="#051C2C" stroke-width="2.5"/><rect x="20" y="8" width="12" height="26" rx="3" stroke="#051C2C" stroke-width="2.5"/><rect x="36" y="8" width="12" height="32" rx="3" stroke="#051C2C" stroke-width="2.5"/><rect x="7" y="14" width="6" height="5" rx="1.5" fill="#2251FF"/><rect x="23" y="14" width="6" height="5" rx="1.5" fill="#2251FF"/></svg>
+        </div>
+        <h3>EJECUCIÓN COLABORATIVA</h3>
+        <p>Kanban drag-and-drop con updates optimistas y reversión automática. Sincronización en tiempo real entre miembros vía Supabase Realtime. Roles owner / editor / viewer con invitaciones firmadas.</p>
+      </div>
+      <div class="pillar">
+        <div class="icon">
+          <svg width="54" height="52" viewBox="0 0 54 52" fill="none"><path d="M6 10 h34 a4 4 0 0 1 4 4 v16 a4 4 0 0 1 -4 4 H20 l-8 8 v-8 H10 a4 4 0 0 1 -4 -4 V14 a4 4 0 0 1 4 -4 Z" stroke="#051C2C" stroke-width="2.5" fill="none"/><circle cx="23" cy="22" r="7" stroke="#2251FF" stroke-width="2.5" fill="none"/><path d="M23 17.5 v-2.5 M23 29.5 v-2.5 M27.5 22 h2.5 M16 22 h2.5" stroke="#2251FF" stroke-width="2.5" stroke-linecap="round"/></svg>
+        </div>
+        <h3>INTELIGENCIA ACCIONABLE</h3>
+        <p>Agente conversacional con 6 herramientas: crear, actualizar, mover, eliminar, buscar tareas y comentarios. Loop de 2 turnos con streaming token a token. Modo voz en español (dictado + respuesta hablada).</p>
+      </div>
+      <div class="pillar">
+        <div class="icon">
+          <svg width="52" height="52" viewBox="0 0 52 52" fill="none"><path d="M6 46 h40" stroke="#051C2C" stroke-width="2.5" stroke-linecap="round"/><rect x="10" y="28" width="8" height="14" rx="2" stroke="#051C2C" stroke-width="2.5"/><rect x="23" y="18" width="8" height="24" rx="2" stroke="#051C2C" stroke-width="2.5"/><rect x="36" y="8" width="8" height="34" rx="2" fill="#E8EEFF" stroke="#2251FF" stroke-width="2.5"/></svg>
+        </div>
+        <h3>VISIBILIDAD EJECUTIVA</h3>
+        <p>Burndown, velocidad y riesgo de entrega calculados del dato real. Informe narrativo generado por LLM, exportable a HTML/PDF. Generación de backlog con IA con prompt visible y editable.</p>
+      </div>
+    </div>
+  </div>
+  <div class="sowhat"><strong>So what:</strong> un solo producto cubre el ciclo completo — planear, ejecutar, preguntar y reportar.</div>
+</section>
+
+<!-- ══ 5 · ARQUITECTURA ══ -->
+<section class="slide">
+  <div class="kicker">Arquitectura</div>
+  <h2>Cuatro capas donde la seguridad vive en la base de datos y la IA es un servicio intercambiable</h2>
+  <div class="rule"></div>
+  <div class="body">
+    <div class="arch">
+      <div class="layers">
+        <div class="layer"><h4>CLIENTE</h4><p>Next.js 16 · React 19 · Kanban optimista · Chat SSE · Analítica</p></div>
+        <div class="layer-arrow">↓</div>
+        <div class="layer"><h4>MIDDLEWARE</h4><p>Validación de sesión en cada navegación · timeout 5s (fail fast)</p></div>
+        <div class="layer-arrow">↓</div>
+        <div class="layer"><h4>SERVIDOR</h4><p>Server Actions: Auth → Zod → Autorización → Mutación · Agente IA · Rate limit fail-open</p></div>
+        <div class="layer-arrow">↓</div>
+        <div class="layer"><h4>DATOS</h4><p>Supabase PostgreSQL · RLS en 12 tablas · pgvector halfvec 512 + HNSW · Realtime</p></div>
+      </div>
+      <div class="ai-panel">
+        <h4>SERVICIOS IA (INTERCAMBIABLES)</h4>
+        <div class="ai-item"><b>DeepSeek deepseek-chat</b><span>LLM principal · tool calling + SSE</span></div>
+        <div class="ai-item"><b>Claude Haiku 4.5</b><span>fallback automático en turno 2</span></div>
+        <div class="ai-item"><b>Voyage voyage-3-lite</b><span>embeddings 512 dims + rerank-2-lite</span></div>
+        <div style="margin-top:14px; text-align:center; color:#2251FF; font-weight:700; font-size:13px;">⇄ conectado al SERVIDOR</div>
+      </div>
+    </div>
+  </div>
+  <div class="sowhat"><strong>So what:</strong> cada capa falla de forma controlada — y ninguna clave privilegiada toca el cliente.</div>
+</section>
+
+<!-- ══ 6 · AGENTE ══ -->
+<section class="slide">
+  <div class="kicker">El agente IA</div>
+  <h2>El agente resuelve en dos turnos: primero decide y ejecuta con herramientas, después responde con evidencia</h2>
+  <div class="rule"></div>
+  <div class="body" style="justify-content:center;">
+    <div class="flow">
+      <div class="fnode"><h5>1 · ENTRADA</h5><p>Mensaje del usuario en lenguaje natural</p></div>
+      <div class="farrow">→</div>
+      <div class="fnode"><h5>2 · CONTEXTO</h5><p>RAG híbrido entrega el top-5 de tareas relevantes con citas</p></div>
+      <div class="farrow">→</div>
+      <div class="fnode"><h5>3 · TURNO 1</h5><p>DeepSeek decide: ¿responder directo o usar tools?</p></div>
+      <div class="farrow">→</div>
+      <div class="fnode gate"><h5>🔒 4 · COMPUERTA</h5><p>¿Acción destructiva? <b>confirm_required</b>: el stream se detiene hasta confirmación explícita</p></div>
+      <div class="farrow">→</div>
+      <div class="fnode"><h5>5 · EJECUCIÓN</h5><p>Tools en paralelo, validadas por RLS + rol de proyecto</p></div>
+      <div class="farrow">→</div>
+      <div class="fnode"><h5>6 · TURNO 2</h5><p>Respuesta en streaming + citas + refresco del tablero</p></div>
+    </div>
+    <div class="tools-ribbon">6 herramientas: create_task · update_task · move_task · delete_task · search_tasks · search_comments</div>
+  </div>
+  <div class="sowhat"><strong>So what:</strong> fricción cero en lo seguro — fricción deliberada en lo irreversible.</div>
+</section>
+
+<!-- ══ 7 · RAG ══ -->
+<section class="slide">
+  <div class="kicker">Búsqueda semántica</div>
+  <h2>La búsqueda combina intención estructural y semántica vectorial; un reranker decide qué merece llegar al LLM</h2>
+  <div class="rule"></div>
+  <div class="body" style="justify-content:center;">
+    <div class="rag">
+      <div class="rag-col" style="flex:0.9;">
+        <div class="rnode"><h5>CONSULTA</h5><p>Pregunta del usuario en lenguaje natural</p></div>
+      </div>
+      <div class="farrow">→</div>
+      <div class="rag-col" style="flex:1.5;">
+        <div class="rnode"><h5>RUTA A · INTENCIÓN</h5><p>Regex bilingüe (es/en) detecta status y prioridad → SQL directo filtrado por proyecto</p></div>
+        <div class="rnode"><h5>RUTA B · SEMÁNTICA</h5><p>Embedding voyage-3-lite (512 dims) → búsqueda HNSW por distancia coseno</p></div>
+      </div>
+      <div class="farrow">→</div>
+      <div class="rag-col" style="flex:1;">
+        <div class="rnode"><h5>FUSIÓN</h5><p>Deduplicación de ambas rutas → top-20 candidatos</p></div>
+      </div>
+      <div class="farrow">→</div>
+      <div class="rag-col" style="flex:1;">
+        <div class="rnode"><h5>RERANKING</h5><p>rerank-2-lite reordena por relevancia real</p></div>
+      </div>
+      <div class="farrow">→</div>
+      <div class="rag-col" style="flex:1;">
+        <div class="rnode final"><h5>TOP-5 AL LLM</h5><p>Contexto final con citas numeradas verificables</p></div>
+      </div>
+    </div>
+    <div class="rag-callout"><b style="color:#051C2C;">Degradación elegante:</b> si el reranker falla, se usan los mejores candidatos sin reordenar (bypass punteado) — el chat nunca se queda sin contexto por un servicio auxiliar.</div>
+  </div>
+  <div class="sowhat"><strong>So what:</strong> precisión de búsqueda enterprise con dos APIs de bajo costo — sin infraestructura vectorial dedicada.</div>
+</section>
+
+<!-- ══ 8 · SEGURIDAD ══ -->
+<section class="slide">
+  <div class="kicker">Seguridad</div>
+  <h2>Cinco capas independientes de defensa: si una falla, la siguiente contiene el daño</h2>
+  <div class="rule"></div>
+  <div class="body">
+    <div class="sec">
+      <div class="shields">
+        <svg width="34" height="40" viewBox="0 0 34 40"><path d="M17 2 L31 8 V20 C31 30 25 36 17 38 C9 36 3 30 3 20 V8 Z" fill="none" stroke="#051C2C" stroke-width="2"/></svg>
+        <svg width="34" height="40" viewBox="0 0 34 40"><path d="M17 2 L31 8 V20 C31 30 25 36 17 38 C9 36 3 30 3 20 V8 Z" fill="#E8EEFF" stroke="#051C2C" stroke-width="2"/></svg>
+        <svg width="34" height="40" viewBox="0 0 34 40"><path d="M17 2 L31 8 V20 C31 30 25 36 17 38 C9 36 3 30 3 20 V8 Z" fill="#B9C9F5" stroke="#051C2C" stroke-width="2"/></svg>
+        <svg width="34" height="40" viewBox="0 0 34 40"><path d="M17 2 L31 8 V20 C31 30 25 36 17 38 C9 36 3 30 3 20 V8 Z" fill="#5A79D8" stroke="#051C2C" stroke-width="2"/></svg>
+        <svg width="34" height="40" viewBox="0 0 34 40"><path d="M17 2 L31 8 V20 C31 30 25 36 17 38 C9 36 3 30 3 20 V8 Z" fill="#051C2C" stroke="#051C2C" stroke-width="2"/></svg>
+      </div>
+      <table class="mck">
+        <thead><tr><th>Capa</th><th>Mecanismo</th><th>Ejemplo concreto</th></tr></thead>
+        <tbody>
+          <tr><td class="lead">BASE DE DATOS</td><td>RLS en 12 tablas + funciones SECURITY DEFINER</td><td>Un SELECT ajeno devuelve vacío aunque el código tenga un bug</td></tr>
+          <tr><td class="lead">SERVER ACTIONS</td><td>Zod antes de toda query: Auth → Validación → Autorización → Mutación</td><td>Payloads arbitrarios rechazados antes de tocar datos</td></tr>
+          <tr><td class="lead">INTEGRIDAD</td><td>Trigger user_id inmutable; task_assignments como asignación mutable</td><td>Ni el service_role puede robar la propiedad de una tarea</td></tr>
+          <tr><td class="lead">SERVICIOS INTERNOS</td><td>HMAC con hash del body + ventana de 5 minutos</td><td>Nadie invoca el pipeline de embeddings sin la firma</td></tr>
+          <tr><td class="lead">CUENTA DEMO</td><td>Doble capa: la UI redirige a registro + la Server Action rechaza</td><td>El invitado no puede vaciar el tablero — probado tras un incidente real</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="sowhat"><strong>So what:</strong> la seguridad no depende de que la UI se comporte — el servidor y la base de datos son la línea real.</div>
+</section>
+
+<!-- ══ 9 · CASO OLIST ══ -->
+<section class="slide">
+  <div class="kicker">Caso real · Sodimac — Área de Mercadeo</div>
+  <h2>El caso Olist demuestra el producto con un proyecto de analítica end-to-end: 60 tareas, 5 roles y 93% de avance consultable por chat</h2>
+  <div class="rule"></div>
+  <div class="body">
+    <div class="kpis">
+      <div class="kpi"><div class="n">60</div><div class="c">tareas en 6 fases</div></div>
+      <div class="kpi"><div class="n">910 h</div><div class="c">estimadas · feb–jul 2026</div></div>
+      <div class="kpi"><div class="n">93%</div><div class="c">de avance a la fecha de corte</div></div>
+      <div class="kpi"><div class="n">5</div><div class="c">roles con asignación real</div></div>
+    </div>
+    <div class="olist-mid">
+      <div class="olist-block">
+        <h4>EL PROYECTO</h4>
+        <p>Analítica de e-commerce (dataset Olist de Kaggle) con arquitectura Medallion completa. Incluye 16 reviews semanales de sprint.</p>
+        <div class="chevrons">
+          <div class="chev">Análisis</div><div class="chev">Bronze</div><div class="chev">Silver</div><div class="chev">Gold</div><div class="chev">ML</div><div class="chev">Reportes</div>
+        </div>
+      </div>
+      <div class="olist-block">
+        <h4>EL EQUIPO (TAREAS ASIGNADAS)</h4>
+        <p>Cinco roles con carga real distribuida sobre las 60 tareas del backlog.</p>
+        <div class="rolebar">
+          <div class="rseg" style="flex:14; background:#051C2C;">Data Eng.<br>14</div>
+          <div class="rseg" style="flex:13; background:#1D3F63;">Data Analyst<br>13</div>
+          <div class="rseg" style="flex:7;  background:#2251FF;">ML Eng.<br>7</div>
+          <div class="rseg" style="flex:8;  background:#5A79D8;">Bus. Analyst<br>8</div>
+          <div class="rseg" style="flex:18; background:#8FA6E8;">Scrum Master<br>18</div>
+        </div>
+      </div>
+    </div>
+    <div class="olist-callout">Las 60 tareas tienen embeddings — el agente responde <b style="color:#051C2C;">"¿qué tiene pendiente el ML Engineer?"</b> con citas verificables. Demo pública: 1 clic como invitado, con acciones destructivas bloqueadas.</div>
+  </div>
+  <div class="sowhat"><strong>So what:</strong> no es un demo con datos de relleno — es un backlog realista de ingeniería de datos que el agente entiende y opera.</div>
+</section>
+
+<!-- ══ 10 · CALIDAD ══ -->
+<section class="slide">
+  <div class="kicker">Calidad y delivery</div>
+  <h2>Cinco compuertas automáticas garantizan que lo que llega a producción es exactamente lo que se probó</h2>
+  <div class="rule"></div>
+  <div class="body" style="justify-content:center;">
+    <div class="gates">
+      <div class="gate-box"><h5>1 · LINT</h5><p>0 warnings</p></div>
+      <div class="farrow">→</div>
+      <div class="gate-box"><h5>2 · TYPECHECK</h5><p>TypeScript estricto</p></div>
+      <div class="farrow">→</div>
+      <div class="gate-box"><h5>3 · TESTS</h5><p>124 unitarios · cobertura ≥ 70%</p></div>
+      <div class="farrow">→</div>
+      <div class="gate-box"><h5>4 · BUILD</h5><p>Compilación de producción</p></div>
+      <div class="farrow">→</div>
+      <div class="gate-box"><h5>5 · LIGHTHOUSE</h5><p>LCP &lt; 2.5s · CLS &lt; 0.1 como error</p></div>
+      <div class="farrow">→</div>
+      <div class="gate-final">DEPLOY<br>PREBUILT</div>
+    </div>
+    <div class="ci-bullets">
+      <div class="bullet"><div class="sq"></div><p><strong>Deploy prebuilt:</strong> el artefacto que pasó CI es el que se publica — sin rebuild sorpresa.</p></div>
+      <div class="bullet"><div class="sq"></div><p><strong>E2E con Playwright:</strong> 6 specs autenticadas + proyecto público para validar guards sin sesión.</p></div>
+      <div class="bullet"><div class="sq"></div><p><strong>Auditoría IA post-build:</strong> 4 blockers detectados y corregidos antes del lanzamiento.</p></div>
+      <div class="bullet"><div class="sq"></div><p><strong>Observabilidad:</strong> Sentry con eventos custom, sin fugas de datos personales.</p></div>
+    </div>
+  </div>
+  <div class="sowhat"><strong>So what:</strong> la velocidad de entrega no se compró con deuda — se compró con automatización.</div>
+</section>
+
+<!-- ══ 11 · OPERACIÓN ══ -->
+<section class="slide">
+  <div class="kicker">Operación en producción</div>
+  <h2>Cuatro incidentes reales en dos semanas dejaron cuatro patrones de resiliencia hoy codificados en el producto</h2>
+  <div class="rule"></div>
+  <div class="body" style="justify-content:center;">
+    <table class="mck">
+      <thead><tr><th>Incidente real</th><th>Impacto</th><th>Patrón resultante</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="dot-red"></span>Redis de rate-limiting eliminado (DNS muerto)</td>
+          <td>Chat, reportes y auditoría caían con error 500</td>
+          <td><span class="check-g">✓</span><span class="pat">FAIL-OPEN:</span> dependencias de costos nunca son single point of failure</td>
+        </tr>
+        <tr>
+          <td><span class="dot-red"></span>Supabase free-tier pausado por inactividad</td>
+          <td>"This page couldn't load" en cada retorno</td>
+          <td><span class="check-g">✓</span><span class="pat">TIMEOUT EN EL HOT PATH:</span> 5s y fail fast — latencia ajena ≠ downtime propio</td>
+        </tr>
+        <tr>
+          <td><span class="dot-red"></span>Primer invitado borró el tablero demo</td>
+          <td>Demo inutilizada para los siguientes visitantes</td>
+          <td><span class="check-g">✓</span><span class="pat">DOBLE CAPA DESTRUCTIVA:</span> UI que guía + servidor que rechaza</td>
+        </tr>
+        <tr>
+          <td><span class="dot-red"></span>Cambio de proveedor LLM requerido</td>
+          <td>Riesgo de reescritura del agente</td>
+          <td><span class="check-g">✓</span><span class="pat">ABSTRACCIÓN OPENAI-COMPATIBLE:</span> migración Groq → DeepSeek en ~1 hora, cero cambios al parser</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="sowhat"><strong>So what:</strong> el sistema ya no asume que sus dependencias viven — asume que van a morir y decide cómo degradarse.</div>
+</section>
+
+<!-- ══ 12 · CIERRE ══ -->
+<section class="slide">
+  <div class="kicker">Cierre y roadmap</div>
+  <h2>La base está en producción; el roadmap multiplica valor sobre lo construido, no lo reconstruye</h2>
+  <div class="rule"></div>
+  <div class="body">
+    <div class="close-grid">
+      <div class="timeline">
+        <div class="tl-item"><div class="n">1</div><p><strong>Restaurar rate limiting</strong> con nueva instancia Redis — el fail-open ya protege la transición.</p></div>
+        <div class="tl-item"><div class="n">2</div><p><strong>Caché de embeddings de consulta</strong> (TTL 1h) — reduce 30–50% las llamadas a Voyage.</p></div>
+        <div class="tl-item"><div class="n">3</div><p><strong>Streaming en turno 1 del agente</strong> — primer token de ~4s a &lt;500ms percibidos.</p></div>
+        <div class="tl-item"><div class="n">4</div><p><strong>Auto-asignación de tareas generadas por IA</strong> — del contexto del prompt a asignaciones reales.</p></div>
+        <div class="tl-item"><div class="n">5</div><p><strong>Entornos preview completos</strong> — validar PRs con datos aislados.</p></div>
+      </div>
+      <div>
+        <div class="quote">TaskFlow v3 demuestra que un equipo pequeño, con arquitectura correcta y disciplina de seguridad, puede llevar IA agéntica a producción real.</div>
+        <div class="cta">DEMO EN VIVO — 1 clic como invitado</div>
+        <div class="close-footer">MCOY AI + Data Strategy · Datapath Bootcamp · Julio 2026</div>
+      </div>
+    </div>
+  </div>
+  <div class="sowhat"><strong>Siguiente paso:</strong> el proyecto Olist, el agente y los reportes están esperando preguntas.</div>
+</section>
+
+</div><!-- /deck -->
+</div><!-- /viewport -->
+
+<!-- ══ HUD DE NAVEGACIÓN ══ -->
+<div id="hud">
+  <button onclick="go(-1)" title="Anterior">‹</button>
+  <span id="counter">1 / 12</span>
+  <button onclick="go(1)" title="Siguiente">›</button>
+  <span class="hint-key">← → navegar · Ctrl+P exportar PDF</span>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide')
+  let current = 0
+
+  function show(i) {
+    current = Math.max(0, Math.min(slides.length - 1, i))
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === current))
+    document.getElementById('counter').textContent = (current + 1) + ' / ' + slides.length
+  }
+  function go(delta) { show(current + delta) }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); go(1) }
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(-1) }
+    if (e.key === 'Home') show(0)
+    if (e.key === 'End') show(slides.length - 1)
+  })
+
+  // Escalar el deck para que quepa en cualquier pantalla
+  function fit() {
+    const deck = document.getElementById('deck')
+    const scale = Math.min(window.innerWidth / 1320, (window.innerHeight - 70) / 740, 1)
+    deck.style.transform = 'scale(' + scale + ')'
+  }
+  window.addEventListener('resize', fit)
+  fit()
+
+  show(0)
+</script>
+
+</body>
+</html>

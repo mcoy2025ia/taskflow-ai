@@ -2,7 +2,7 @@
 create extension if not exists vector;
 
 create table if not exists public.task_embeddings (
-  id           uuid primary key default uuid_generate_v4(),
+  id           uuid primary key default gen_random_uuid(),
   task_id      uuid not null references public.tasks(id) on delete cascade,
   user_id      uuid not null references auth.users(id) on delete cascade,
   -- halfvec(512): Voyage AI voyage-3-lite produce 512 dimensiones

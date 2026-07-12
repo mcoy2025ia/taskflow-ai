@@ -46,3 +46,9 @@ next-env.d.ts
 .vercel
 
 .vercel
+
+# estado local de CLIs y agentes (no versionar)
+supabase/.temp/
+.claude/settings.local.json
+.agents/
+.codex/

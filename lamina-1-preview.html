@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Lámina 1 — Preview de estilo corporativo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #E5E9EF;
+    font-family: 'Inter', 'Segoe UI', Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 18px;
+    padding: 24px;
+  }
+  .hint {
+    font-size: 12px;
+    color: #6B7280;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .slide {
+    width: 1280px;
+    height: 720px;
+    background: #FFFFFF;
+    box-shadow: 0 12px 40px rgba(5,28,44,0.18);
+    display: grid;
+    grid-template-columns: 54% 46%;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  /* ── Mitad izquierda: texto ── */
+  .text-half {
+    padding: 64px 24px 56px 72px;
+    display: flex;
+    flex-direction: column;
+  }
+  .kicker {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    color: #6B7280;
+    text-transform: uppercase;
+  }
+  .title-block { margin-top: auto; }
+  h1 {
+    font-size: 88px;
+    font-weight: 800;
+    color: #051C2C;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .rule {
+    width: 120px;
+    height: 4px;
+    background: #2251FF;
+    margin: 28px 0;
+  }
+  .action-msg {
+    font-size: 27px;
+    font-weight: 600;
+    color: #051C2C;
+    line-height: 1.35;
+    max-width: 560px;
+  }
+  .subtitle {
+    margin-top: 22px;
+    font-size: 15.5px;
+    font-weight: 400;
+    color: #6B7280;
+    line-height: 1.6;
+    max-width: 540px;
+  }
+  .footer {
+    margin-top: auto;
+    padding-top: 40px;
+    font-size: 12.5px;
+    color: #9CA3AF;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Mitad derecha: ilustración ── */
+  .art-half {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, #FFFFFF 0%, #F7F9FB 100%);
+  }
+</style>
+</head>
+<body>
+
+<div class="hint">Preview 1:1 del estilo — 1280 × 720 (16:9) · así debería verse la imagen generada por la IA</div>
+
+<div class="slide">
+  <div class="text-half">
+    <div class="kicker">MCOY AI + Data Strategy · Datapath Bootcamp</div>
+
+    <div class="title-block">
+      <h1>TaskFlow v3</h1>
+      <div class="rule"></div>
+      <div class="action-msg">La gestión de proyectos de datos deja de ser un tablero pasivo y se convierte en un agente que ejecuta.</div>
+      <div class="subtitle">Plataforma SaaS multi-tenant con IA nativa: Kanban colaborativo en tiempo real · Agente RAG con tool calling · Analítica ejecutiva generada por LLM</div>
+    </div>
+
+    <div class="footer">Next.js 16 · Supabase · DeepSeek · Voyage AI — Julio 2026</div>
+  </div>
+
+  <div class="art-half">
+    <!-- Ilustración vectorial plana: kanban → agente -->
+    <svg width="540" height="560" viewBox="0 0 540 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Columna 1 -->
+      <rect x="30" y="120" width="110" height="320" rx="10" stroke="#051C2C" stroke-width="2" fill="#FFFFFF"/>
+      <rect x="44" y="140" width="82" height="10" rx="5" fill="#051C2C" opacity="0.85"/>
+      <rect x="44" y="168" width="82" height="52" rx="6" fill="#F0F4FA" stroke="#C7D2E4" stroke-width="1.5"/>
+      <rect x="44" y="232" width="82" height="52" rx="6" fill="#F0F4FA" stroke="#C7D2E4" stroke-width="1.5"/>
+      <rect x="44" y="296" width="82" height="52" rx="6" fill="#F0F4FA" stroke="#C7D2E4" stroke-width="1.5"/>
+
+      <!-- Columna 2 -->
+      <rect x="165" y="120" width="110" height="320" rx="10" stroke="#051C2C" stroke-width="2" fill="#FFFFFF"/>
+      <rect x="179" y="140" width="82" height="10" rx="5" fill="#051C2C" opacity="0.85"/>
+      <rect x="179" y="168" width="82" height="52" rx="6" fill="#E8EEFF" stroke="#2251FF" stroke-width="1.5"/>
+      <rect x="179" y="232" width="82" height="52" rx="6" fill="#F0F4FA" stroke="#C7D2E4" stroke-width="1.5"/>
+
+      <!-- Columna 3 -->
+      <rect x="300" y="120" width="110" height="320" rx="10" stroke="#051C2C" stroke-width="2" fill="#FFFFFF"/>
+      <rect x="314" y="140" width="82" height="10" rx="5" fill="#051C2C" opacity="0.85"/>
+      <rect x="314" y="168" width="82" height="52" rx="6" fill="#E8EEFF" stroke="#2251FF" stroke-width="1.5"/>
+
+      <!-- Líneas conectoras hacia el agente -->
+      <path d="M126 194 C 200 90, 380 90, 478 262" stroke="#2251FF" stroke-width="2" fill="none" opacity="0.55"/>
+      <path d="M261 194 C 330 140, 420 160, 478 268" stroke="#2251FF" stroke-width="2" fill="none" opacity="0.75"/>
+      <path d="M396 194 C 440 210, 462 230, 478 274" stroke="#2251FF" stroke-width="2.5" fill="none"/>
+      <path d="M126 322 C 240 470, 400 430, 478 292" stroke="#2251FF" stroke-width="2" fill="none" opacity="0.4"/>
+
+      <!-- Puntos de origen -->
+      <circle cx="126" cy="194" r="5" fill="#2251FF"/>
+      <circle cx="261" cy="194" r="5" fill="#2251FF"/>
+      <circle cx="396" cy="194" r="5" fill="#2251FF"/>
+      <circle cx="126" cy="322" r="5" fill="#2251FF" opacity="0.6"/>
+
+      <!-- Nodo agente (verde) -->
+      <circle cx="486" cy="278" r="34" fill="#10B981" opacity="0.12"/>
+      <circle cx="486" cy="278" r="22" fill="#10B981"/>
+      <path d="M478 278 L484 284 L495 271" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+      <!-- Etiqueta del nodo -->
+      <text x="486" y="336" text-anchor="middle" font-family="Inter, Segoe UI, Helvetica, sans-serif" font-size="13" font-weight="600" fill="#051C2C" letter-spacing="0.08em">AGENTE</text>
+    </svg>
+  </div>
+</div>
+
+<div class="hint" style="max-width:1280px; text-transform:none; letter-spacing:0; line-height:1.7;">
+  ✅ Si esta dirección visual te convence, pega el <strong>Prompt de la Diapositiva 1</strong> de <code>presentaciones.md</code> en Gemini o ChatGPT — el resultado debe parecerse a esto.
+  Si algo no cuadra (proporciones, colores, ilustración), lo ajustamos aquí primero y actualizo el prompt.
+</div>
+
+</body>
+</html>

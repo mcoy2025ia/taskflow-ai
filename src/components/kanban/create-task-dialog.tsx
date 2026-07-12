@@ -19,7 +19,12 @@ import type { TaskStatus } from '@/types/app.types'
 
 type FormValues = z.input<typeof CreateTaskSchema>
 
-export function CreateTaskDialog({ defaultStatus }: { defaultStatus: TaskStatus }) {
+interface CreateTaskDialogProps {
+  defaultStatus: TaskStatus
+  projectId: string | null
+}
+
+export function CreateTaskDialog({ defaultStatus, projectId }: CreateTaskDialogProps) {
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -30,12 +35,13 @@ export function CreateTaskDialog({ defaultStatus }: { defaultStatus: TaskStatus 
       description: '',
       status: defaultStatus,
       priority: 'medium',
+      project_id: projectId,
     },
   })
 
   function onSubmit(data: FormValues) {
     startTransition(async () => {
-      const result = await createTask(data as CreateTaskInput)
+      const result = await createTask({ ...data, project_id: projectId } as CreateTaskInput)
       if (result.success) {
         toast.success('Tarea creada')
         reset()

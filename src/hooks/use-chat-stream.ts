@@ -7,7 +7,7 @@ import type { ChatUIMessage, Source } from '@/types/chat-ui.types'
 const WELCOME: ChatUIMessage = {
   id: 'welcome',
   role: 'assistant',
-  content: '¡Hola! Soy TaskFlow AI. Puedes escribirme o hablarme por voz 🎤. Por ejemplo: *"¿Qué tareas urgentes tengo pendientes?"* o *"¿Cómo va el proyecto?"*.',
+  content: 'Hola, soy TaskFlow AI. Puedo encontrar tareas, detectar bloqueos y ayudarte a organizar el trabajo del proyecto.',
 }
 
 interface UseChatStreamOptions {
@@ -206,7 +206,7 @@ export function useChatStream({ initialSessionId, activeProjectId, onVoiceRespon
       const res = await fetch('/api/chat/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tool: pc.tool, args: pc.args }),
+        body: JSON.stringify({ tool: pc.tool, args: pc.args, projectId: activeProjectId ?? null }),
       })
       const data = await res.json() as { message?: string }
       setMessages(prev => prev.map(m =>

@@ -137,28 +137,25 @@ export function ProjectSwitcher() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(o => !o)}
-        className="flex items-center gap-1.5 min-w-0 group"
+        className="group flex min-w-0 items-center gap-1.5"
         title="Cambiar proyecto"
       >
         <div className="min-w-0">
-          <p className="text-sm font-semibold tracking-tight leading-none truncate max-w-[120px]">
-            TaskFlow AI
-          </p>
-          <p className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
-            <span className="truncate max-w-[110px]">{displayName}</span>
+          <p className="flex max-w-[155px] items-center gap-1.5 truncate text-xs font-semibold leading-none">
+            <span className="truncate">{displayName}</span>
             <ChevronsUpDown
-              size={9}
-              className="flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity"
+              size={11}
+              className="flex-shrink-0 opacity-50 group-hover:opacity-100"
             />
           </p>
+          <p className="mt-1 text-left text-[9px] text-muted-foreground">{activeProject ? ROLE_LABELS[activeProject.role] : 'Proyecto activo'}</p>
         </div>
       </button>
 
       {isOpen && (
         <div className={cn(
           'absolute left-0 top-full mt-1 z-50',
-          'w-52 rounded-lg border border-border/60 bg-popover shadow-lg',
-          'py-1 text-sm'
+          'material-panel w-64 rounded-[8px] py-1.5 text-sm shadow-xl animate-in'
         )}>
           {projects.length > 0 && (
             <>
@@ -170,9 +167,9 @@ export function ProjectSwitcher() {
                   key={p.id}
                   onClick={() => handleSelect(p)}
                   className={cn(
-                    'w-full flex items-center gap-2 px-2.5 py-1.5 text-left transition-colors',
-                    'hover:bg-muted/60 rounded-md mx-0.5',
-                    activeProject?.id === p.id && 'text-indigo-700 dark:text-indigo-300'
+                    'mx-0.5 flex w-[calc(100%-4px)] items-center gap-2 rounded-[7px] px-2.5 py-2 text-left',
+                    'hover:bg-muted/70',
+                    activeProject?.id === p.id && 'bg-primary/[0.07] text-primary'
                   )}
                 >
                   <FolderKanban size={13} className="flex-shrink-0 text-muted-foreground" />
@@ -181,7 +178,7 @@ export function ProjectSwitcher() {
                     {ROLE_LABELS[p.role]}
                   </span>
                   {activeProject?.id === p.id && (
-                    <Check size={11} className="flex-shrink-0 text-indigo-600 dark:text-indigo-400" />
+                    <Check size={11} className="flex-shrink-0 text-primary" />
                   )}
                 </button>
               ))}
@@ -204,16 +201,16 @@ export function ProjectSwitcher() {
                   }}
                   placeholder="Email del invitado"
                   className={cn(
-                    'w-full px-2 py-1 text-xs rounded-md border border-border/60 bg-background',
-                    'focus:outline-none focus:ring-1 focus:ring-indigo-500/50'
+                    'h-8 w-full rounded-[7px] border border-border/70 bg-background px-2 text-xs',
+                    'focus:outline-none focus:ring-2 focus:ring-primary/20'
                   )}
                 />
                 <select
                   value={inviteRole}
                   onChange={e => setInviteRole(e.target.value as 'editor' | 'viewer')}
                   className={cn(
-                    'w-full px-2 py-1 text-xs rounded-md border border-border/60 bg-background',
-                    'focus:outline-none focus:ring-1 focus:ring-indigo-500/50'
+                    'h-8 w-full rounded-[7px] border border-border/70 bg-background px-2 text-xs',
+                    'focus:outline-none focus:ring-2 focus:ring-primary/20'
                   )}
                 >
                   <option value="editor">Editor</option>
@@ -224,8 +221,7 @@ export function ProjectSwitcher() {
                     onClick={handleSendInvite}
                     disabled={!inviteEmail.trim() || isPending}
                     className={cn(
-                      'flex-1 py-1 text-xs rounded-md text-center transition-colors',
-                      'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                      'flex-1 rounded-[7px] bg-primary py-1.5 text-center text-xs text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50'
                     )}
                   >
                     {isPending ? 'Enviando…' : 'Enviar'}
@@ -262,8 +258,8 @@ export function ProjectSwitcher() {
                 placeholder="Nombre del proyecto"
                 maxLength={100}
                 className={cn(
-                  'w-full px-2 py-1 text-xs rounded-md border border-border/60 bg-background',
-                  'focus:outline-none focus:ring-1 focus:ring-indigo-500/50'
+                  'h-8 w-full rounded-[7px] border border-border/70 bg-background px-2 text-xs',
+                  'focus:outline-none focus:ring-2 focus:ring-primary/20'
                 )}
               />
               <div className="flex gap-1">
@@ -271,8 +267,7 @@ export function ProjectSwitcher() {
                   onClick={handleCreateProject}
                   disabled={!newName.trim() || isPending}
                   className={cn(
-                    'flex-1 py-1 text-xs rounded-md text-center transition-colors',
-                    'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed'
+                    'flex-1 rounded-[7px] bg-primary py-1.5 text-center text-xs text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50'
                   )}
                 >
                   {isPending ? 'Creando…' : 'Crear'}

@@ -1,7 +1,7 @@
 -- ── Tabla de invitaciones pendientes ─────────────────────────────────────────
 
 create table if not exists public.pending_invitations (
-  id          uuid primary key default uuid_generate_v4(),
+  id          uuid primary key default gen_random_uuid(),
   project_id  uuid not null references public.projects(id) on delete cascade,
   invited_by  uuid not null references auth.users(id) on delete cascade,
   email       text not null check (char_length(email) <= 254),

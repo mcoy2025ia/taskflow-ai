@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getAuthUser } from '@/lib/supabase/get-user'
 import { AcceptInviteButton } from './accept-invite-button'
+import { Zap, ArrowRight } from 'lucide-react'
 
 interface InvitePageProps {
   params: Promise<{ token: string }>
@@ -37,8 +38,8 @@ export default async function InvitePage({ params }: InvitePageProps) {
         Esta invitación ya fue aceptada anteriormente.
       </p>
       {user && (
-        <a href="/board" className="mt-4 inline-block text-sm text-indigo-600 hover:underline">
-          Ir al tablero →
+        <a href="/board" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline">
+          Ir al tablero <ArrowRight size={14} />
         </a>
       )}
     </InviteLayout>
@@ -69,9 +70,9 @@ export default async function InvitePage({ params }: InvitePageProps) {
       </p>
       <a
         href={loginUrl}
-        className="mt-4 inline-block px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
+        className="mt-4 inline-flex h-10 items-center gap-2 rounded-[8px] bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
       >
-        Iniciar sesión
+        Iniciar sesión <ArrowRight size={14} />
       </a>
     </InviteLayout>
   }
@@ -100,13 +101,11 @@ export default async function InvitePage({ params }: InvitePageProps) {
 
 function InviteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30">
-      <div className="w-full max-w-sm mx-4 p-6 rounded-xl border border-border/60 bg-background shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-7 h-7 rounded-[7px] bg-gradient-to-br from-indigo-600 to-violet-500 flex items-center justify-center">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
+    <div className="flex min-h-dvh items-center justify-center bg-background p-4">
+      <div className="material-panel mx-4 w-full max-w-sm rounded-[8px] p-6 shadow-xl animate-in">
+        <div className="mb-6 flex items-center gap-2.5 border-b border-border/60 pb-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-foreground text-background">
+            <Zap size={15} fill="currentColor" />
           </div>
           <span className="text-sm font-semibold">TaskFlow AI</span>
         </div>

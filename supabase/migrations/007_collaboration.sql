@@ -16,7 +16,7 @@ create table if not exists public.task_assignments (
 );
 
 create table if not exists public.comments (
-  id         uuid primary key default uuid_generate_v4(),
+  id         uuid primary key default gen_random_uuid(),
   task_id    uuid not null references public.tasks(id) on delete cascade,
   user_id    uuid not null references auth.users(id) on delete cascade,
   content    text not null check (char_length(content) between 1 and 2000),
@@ -24,7 +24,7 @@ create table if not exists public.comments (
 );
 
 create table if not exists public.activity_log (
-  id         uuid primary key default uuid_generate_v4(),
+  id         uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects(id) on delete cascade,
   user_id    uuid not null references auth.users(id) on delete cascade,
   action     text not null,

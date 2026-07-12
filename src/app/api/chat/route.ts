@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
   // RAG: obtener tareas relevantes y resumen del proyecto en paralelo
   const [relevantTasks, projectSummary] = await Promise.all([
-    searchTasksByQuery(message, { threshold: 0.3, limit: 5, userId: user.id }),
+    searchTasksByQuery(message, { threshold: 0.3, limit: 5, userId: user.id, projectId }),
     getProjectSummary(user.id, projectId),
   ])
 
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     similarity: t.similarity,
   }))
 
-  const stream = runAgent({ supabase, userId: user.id, messages, voiceMode }, sources)
+  const stream = runAgent({ supabase, userId: user.id, projectId, messages, voiceMode }, sources)
 
   return new Response(stream, {
     headers: {

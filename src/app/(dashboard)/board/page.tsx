@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getAuthUser } from '@/lib/supabase/get-user'
+import { env } from '@/lib/env'
 import { KanbanSkeleton } from '@/components/kanban/skeleton'
 import { KanbanBoardDynamic } from '@/components/kanban/board-dynamic'
 import { InsightBanner } from '@/components/kanban/insight-banner'
@@ -54,8 +55,8 @@ async function BoardTasks({ projectId }: { projectId?: string }) {
     }
   }
 
-  // Fetch tasks with assignees in parallel with member profiles
-  const [tasksResult, membersResult] = await Promise.all([
+  // Fetch tasks with assignees in parallel with member profiles and project metadata
+  const [tasksResult, membersResult, projectResult] = await Promise.all([
     resolvedProjectId
       ? supabase
           .from('tasks')
@@ -66,10 +67,14 @@ async function BoardTasks({ projectId }: { projectId?: string }) {
           .from('tasks')
           .select('*, task_assignments(user_id)')
           .eq('user_id', user.id)
+          .is('project_id', null)
           .order('position', { ascending: true }),
     resolvedProjectId
       ? supabase.rpc('get_project_member_profiles', { p_project_id: resolvedProjectId })
       : Promise.resolve({ data: [] as { user_id: string; full_name: string; avatar_url: string | null; role: string }[] }),
+    resolvedProjectId
+      ? supabase.from('projects').select('name, company, department').eq('id', resolvedProjectId).single()
+      : Promise.resolve({ data: null }),
   ])
 
   if (tasksResult.error) {
@@ -112,6 +117,9 @@ async function BoardTasks({ projectId }: { projectId?: string }) {
         members={members}
         projectId={resolvedProjectId ?? null}
         currentUserId={user.id}
+        projectName={projectResult.data?.name ?? null}
+        projectCompany={projectResult.data?.company ?? null}
+        projectDepartment={projectResult.data?.department ?? null}
       />
     </>
   )
@@ -119,20 +127,26 @@ async function BoardTasks({ projectId }: { projectId?: string }) {
 
 export default async function BoardPage({ searchParams }: BoardPageProps) {
   const params = await searchParams
+  const user = await getAuthUser()
+  const isGuest = !!env.DEMO_EMAIL && user?.email === env.DEMO_EMAIL
   return (
-    <main className="p-4 sm:p-6 overflow-x-hidden md:flex md:flex-col md:h-full md:overflow-hidden">
-      <div className="mb-4 sm:mb-6 flex-shrink-0">
-        <div className="flex items-start justify-between gap-3">
+    <main className="page-enter overflow-x-hidden p-4 sm:p-6 md:flex md:h-full md:flex-col md:overflow-hidden xl:p-8">
+      <div className="mb-5 flex-shrink-0 sm:mb-6">
+        <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">Mi tablero</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Arrastra las tarjetas para reorganizar. Usa el chat para buscar por lenguaje natural.
+            <div className="mb-2 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              <p className="text-[10px] font-bold uppercase text-primary">Vista de equipo</p>
+            </div>
+            <h1 className="text-2xl font-semibold text-foreground sm:text-[28px]">Tu trabajo, en movimiento.</h1>
+            <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-muted-foreground">
+              Prioriza, asigna y mueve cada tarea mientras el equipo avanza.
             </p>
           </div>
-          <BoardActions projectId={params.project_id ?? null} />
+          <BoardActions projectId={params.project_id ?? null} isGuest={isGuest} />
         </div>
       </div>
-      <div className="md:flex-1 md:min-h-0">
+      <div className="min-h-0 md:flex-1">
         <Suspense fallback={<KanbanSkeleton />}>
           <BoardTasks projectId={params.project_id} />
         </Suspense>

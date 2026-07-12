@@ -166,14 +166,14 @@ VISIÓN CRÍTICA: Sin eufemismos — ¿se cumplirá la entrega el ${endLabel}? P
 
 Máximo 120 palabras por sección. Sin markdown, sin bullets, sin asteriscos. Solo texto plano con los títulos en mayúsculas seguidos de dos puntos.`
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+      'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'deepseek-chat',
       messages: [{ role: 'user', content: prompt }],
       stream: false,
       temperature: 0.75,
@@ -182,7 +182,7 @@ Máximo 120 palabras por sección. Sin markdown, sin bullets, sin asteriscos. So
   })
 
   if (!response.ok) {
-    console.error('[api/report] Groq error:', response.status)
+    console.error('[api/report] DeepSeek error:', response.status)
     return NextResponse.json({ error: 'LLM error' }, { status: 500 })
   }
 

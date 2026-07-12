@@ -15,9 +15,11 @@ SaaS de productividad multi-usuario con tablero Kanban colaborativo, agente de I
 - **Búsqueda semántica híbrida** — Voyage AI `voyage-3-lite` (pgvector 512 dims) + reranking con `rerank-2-lite` + detección de intención estructural
 - **Memoria conversacional** — sesiones de chat persistidas en DB, historial cargado por `session_id` en URL
 - **Modo voz** — dictado con Web Speech API + TTS de respuesta en `es-CO`; el LLM ajusta el formato automáticamente
-- **Streaming SSE** — respuestas token a token (Groq `llama-3.3-70b-versatile`); fallback a Claude Haiku 4.5 si Groq cae
+- **Streaming SSE** — respuestas token a token (DeepSeek `deepseek-chat`, con Groq/Ollama como alternativas vía `CHAT_PROVIDER`); fallback a Claude Haiku 4.5 si el proveedor principal cae
 - **Analítica de proyecto** — KPIs, burndown, velocidad, progreso por fase, análisis de riesgo; exportación PDF generado por LLM con jsPDF
 - **Importación de tareas desde CSV** — empty state del tablero ofrece importador con drop zone, preview, validación Zod permisiva y plantilla descargable (`public/template-tareas.csv`); embeddings se generan throttleados en background respetando el rate limit de Voyage
+- **Generación de tareas con IA** — antes de generar, un modal muestra el prompt completo (empresa, proyecto/área, participantes del equipo, instrucciones) para que el usuario lo revise o edite antes de enviarlo al LLM
+- **Modo invitado restringido** — login demo compartido (`/login` → "Explorar como invitado") con acceso de solo lectura a acciones destructivas; intentar borrar tareas redirige a crear cuenta propia
 - **Multi-tenancy** — proyectos, roles (owner/editor/viewer), invitaciones por email con tokens, sync en tiempo real via Supabase Realtime
 - **Comentarios en tareas** — thread por tarea, el agente puede buscar en comentarios via `search_comments` tool
 - **Onboarding interactivo** — tour de 4 pasos + proyecto demo pre-poblado con 10 tareas
@@ -34,7 +36,7 @@ SaaS de productividad multi-usuario con tablero Kanban colaborativo, agente de I
 | Frontend | Next.js 16 App Router + TypeScript strict + React 19 |
 | Auth & DB | Supabase (PostgreSQL + RLS + pgvector `halfvec(512)`) |
 | Embeddings | Voyage AI `voyage-3-lite` (512 dims) + `rerank-2-lite` |
-| Chat LLM | Groq `llama-3.3-70b-versatile` + Claude Haiku 4.5 (fallback) |
+| Chat LLM | DeepSeek `deepseek-chat` + Claude Haiku 4.5 (fallback) |
 | UI | Tailwind CSS v4 + shadcn/ui + @dnd-kit + Geist font |
 | PDF | jsPDF (vectorial, sin html2canvas) |
 | Rate limiting | Upstash Redis (`@upstash/ratelimit`) |
@@ -47,9 +49,32 @@ SaaS de productividad multi-usuario con tablero Kanban colaborativo, agente de I
 ## Requisitos previos
 
 - Node.js 24+
-- Proyecto en [Supabase](https://supabase.com/) con las 10 migraciones aplicadas
+- Proyecto en [Supabase](https://supabase.com/) con las 13 migraciones aplicadas
+- Proyecto de Supabase activo/restaurado. Si Supabase pausa el proyecto, login y E2E autenticados pueden fallar aunque las credenciales sean correctas.
 - API key de [Voyage AI](https://www.voyageai.com/) para embeddings
-- API key de [Groq](https://console.groq.com/) para chat
+- API key de [DeepSeek](https://platform.deepseek.com/) para chat (o Groq/Ollama vía `CHAT_PROVIDER`)
+
+## Supabase pausado y autenticacion
+
+Si el login muestra `Credenciales invalidas` o los E2E se quedan en `/login`, primero revisa el estado del proyecto en Supabase antes de cambiar codigo o credenciales.
+
+Checklist rapido:
+
+1. En Supabase Dashboard, abre el proyecto y pulsa **Restore project** si aparece pausado.
+2. Espera a que Auth, Database y Realtime queden disponibles.
+3. Verifica que `.env.local` apunte al mismo proyecto restaurado:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+4. Confirma que el usuario de pruebas existe en Supabase Auth y que puede iniciar sesion.
+5. Vuelve a correr:
+
+```bash
+npx playwright test --project=public
+npm run test:e2e
+```
+
+Nota: `npx playwright test --project=public` no requiere sesion real. `npm run test:e2e` si requiere `TEST_USER_EMAIL` y `TEST_USER_PASSWORD` validos contra un Supabase activo.
 
 ## Instalación local
 
@@ -94,8 +119,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 
 VOYAGE_API_KEY=<voyage-api-key>
-GROQ_API_KEY=<groq-api-key>
-CHAT_PROVIDER=groq
+DEEPSEEK_API_KEY=<deepseek-api-key>
+CHAT_PROVIDER=deepseek          # 'deepseek' | 'groq' | 'ollama'
 
 EMBED_INTERNAL_SECRET=<min-32-random-chars>   # openssl rand -hex 32
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -108,7 +133,8 @@ Opcionales (funcionalidad extra):
 
 ```env
 RESEND_API_KEY=<key>            # emails de invitación
-ANTHROPIC_API_KEY=<key>         # fallback Claude Haiku si Groq cae
+ANTHROPIC_API_KEY=<key>         # fallback Claude Haiku si DeepSeek/Groq caen
+GROQ_API_KEY=<key>              # solo si CHAT_PROVIDER=groq
 CRON_SECRET=<secret>            # protege /api/cron/insights
 NEXT_PUBLIC_SENTRY_DSN=<dsn>    # observabilidad
 ```
@@ -129,6 +155,7 @@ npm run test:e2e:ui   # Playwright con interfaz visual
 
 # Correr un solo archivo:
 npx vitest run src/actions/__tests__/tasks.test.ts
+npx playwright test --project=public
 npx playwright test e2e/agent.spec.ts
 
 # Backfill embeddings (si las tareas ya existen pero task_embeddings está vacía):
@@ -139,13 +166,15 @@ npx dotenv -e .env.local -- npx tsx scripts/seed-embeddings.ts
 
 El asistente combina RAG y tool calling en un loop de 2 turnos:
 
+El contexto RAG y las tools respetan el proyecto activo (`projectId`). Si no hay proyecto activo, el agente trabaja sobre tareas personales (`project_id IS NULL`). Esto evita mezclar tareas entre proyectos compartidos y workspace personal.
+
 **Turno 1** — detección de intención + tools:
 1. **Búsqueda híbrida** — intención estructural (regex status/priority) + semántica (pgvector) en paralelo; resultados fusionados y re-rankeados con Voyage `rerank-2-lite`
-2. **Tool calling** — Groq detecta si la query requiere acción (crear/mover/eliminar tarea, buscar comentarios); acciones destructivas emiten `confirm_required` y pausan hasta confirmación del usuario
+2. **Tool calling** — DeepSeek detecta si la query requiere acción (crear/mover/eliminar tarea, buscar comentarios); acciones destructivas emiten `confirm_required` y pausan hasta confirmación del usuario
 
 **Turno 2** — respuesta final en streaming SSE con los resultados de las tools inyectados como contexto.
 
-Fallback: si Groq no responde, se activa Claude Haiku 4.5 via Anthropic API (solo texto, sin tool calling).
+Fallback: si DeepSeek no responde, se activa Claude Haiku 4.5 via Anthropic API (solo texto, sin tool calling).
 
 ## Migraciones y base de datos
 

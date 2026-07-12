@@ -24,6 +24,59 @@ async function getAuthenticatedUser() {
   return { supabase, user }
 }
 
+type EditableTask = {
+  id: string
+  user_id: string
+  project_id: string | null
+}
+
+async function verifyProjectEditor(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  projectId: string,
+  userId: string
+): Promise<ActionResult> {
+  const { data: membership } = await supabase
+    .from('project_members')
+    .select('role')
+    .eq('project_id', projectId)
+    .eq('user_id', userId)
+    .single()
+
+  if (!membership || !['owner', 'editor'].includes(membership.role)) {
+    return { success: false, error: 'No tienes permiso de editor en este proyecto' }
+  }
+
+  return { success: true, data: undefined }
+}
+
+async function getEditableTask(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  taskId: string,
+  userId: string
+): Promise<ActionResult<EditableTask>> {
+  const { data: task, error } = await supabase
+    .from('tasks')
+    .select('id, user_id, project_id')
+    .eq('id', taskId)
+    .single()
+
+  if (error || !task) {
+    return { success: false, error: 'Tarea no encontrada' }
+  }
+
+  if (!task.project_id) {
+    if (task.user_id !== userId) {
+      return { success: false, error: 'No tienes permiso para editar esta tarea' }
+    }
+    return { success: true, data: task as EditableTask }
+  }
+
+  const membership = await verifyProjectEditor(supabase, task.project_id, userId)
+  if (!membership.success) return membership
+
+  return { success: true, data: task as EditableTask }
+}
+
 export async function createTask(
   input: CreateTaskInput
 ): Promise<ActionResult<{ id: string }>> {
@@ -32,18 +85,30 @@ export async function createTask(
     return { success: false, error: parsed.error.issues[0]?.message ?? 'Error de validación' }
   }
   const { supabase, user } = await getAuthenticatedUser()
-  const { data: maxPos } = await supabase
+
+  const projectId = parsed.data.project_id ?? null
+  if (projectId) {
+    const membership = await verifyProjectEditor(supabase, projectId, user.id)
+    if (!membership.success) return membership
+  }
+
+  let posQuery = supabase
     .from("tasks")
     .select("position")
-    .eq("user_id", user.id)
     .eq("status", parsed.data.status)
     .order("position", { ascending: false })
     .limit(1)
+
+  posQuery = projectId
+    ? posQuery.eq("project_id", projectId)
+    : posQuery.eq("user_id", user.id).is("project_id", null)
+
+  const { data: maxPos } = await posQuery
     .single()
   const position = maxPos ? maxPos.position + 1000 : 1000
   const { data, error } = await supabase
     .from("tasks")
-    .insert({ ...parsed.data, user_id: user.id, position })
+    .insert({ ...parsed.data, project_id: projectId, user_id: user.id, position })
     .select("id")
     .single()
   if (error) return { success: false, error: "Error al crear la tarea" }
@@ -61,11 +126,13 @@ export async function moveTask(
     return { success: false, error: "Datos de movimiento invalidos" }
   }
   const { supabase, user } = await getAuthenticatedUser()
+  const editable = await getEditableTask(supabase, parsed.data.id, user.id)
+  if (!editable.success) return editable
+
   const { error } = await supabase
     .from("tasks")
     .update({ status: parsed.data.status, position: parsed.data.position })
     .eq("id", parsed.data.id)
-    .eq("user_id", user.id)
   if (error) return { success: false, error: "Error al mover la tarea" }
   revalidatePath("/board")
   return { success: true, data: undefined }
@@ -80,11 +147,13 @@ export async function updateTask(
   }
   const { supabase, user } = await getAuthenticatedUser()
   const { id, ...updates } = parsed.data
+  const editable = await getEditableTask(supabase, id, user.id)
+  if (!editable.success) return editable
+
   const { error } = await supabase
     .from("tasks")
     .update(updates)
     .eq("id", id)
-    .eq("user_id", user.id)
   if (error) return { success: false, error: "Error al actualizar la tarea" }
   if (updates.title || updates.description !== undefined) {
     const { data: task } = await supabase
@@ -100,11 +169,13 @@ export async function updateTask(
 
 export async function deleteTask(id: string): Promise<ActionResult> {
   const { supabase, user } = await getAuthenticatedUser()
+  const editable = await getEditableTask(supabase, id, user.id)
+  if (!editable.success) return editable
+
   const { error } = await supabase
     .from("tasks")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id)
   if (error) return { success: false, error: "Error al eliminar la tarea" }
   Sentry.addBreadcrumb({ category: 'task', message: 'task.deleted', data: { taskId: id }, level: 'info' })
   revalidatePath("/board")

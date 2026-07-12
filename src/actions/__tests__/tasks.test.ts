@@ -42,7 +42,7 @@ function makeChain<T>(result: T) {
     single: vi.fn().mockResolvedValue(result),
   } as Chain
 
-  for (const method of ['select', 'insert', 'update', 'delete', 'eq', 'order', 'limit']) {
+  for (const method of ['select', 'insert', 'update', 'delete', 'eq', 'is', 'order', 'limit']) {
     ;(chain as Record<string, unknown>)[method] = vi.fn(() => chain)
   }
 
@@ -123,7 +123,10 @@ describe('moveTask', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('returns success when task is moved', async () => {
-    mockClient([makeChain({ error: null })])
+    mockClient([
+      makeChain({ data: { id: crypto.randomUUID(), user_id: USER.id, project_id: null }, error: null }),
+      makeChain({ error: null }),
+    ])
 
     const result = await moveTask({ id: crypto.randomUUID(), status: 'in_progress', position: 2000 })
     expect(result.success).toBe(true)
@@ -135,7 +138,10 @@ describe('moveTask', () => {
   })
 
   it('returns error when supabase update fails', async () => {
-    mockClient([makeChain({ error: { message: 'row not found' } })])
+    mockClient([
+      makeChain({ data: { id: crypto.randomUUID(), user_id: USER.id, project_id: null }, error: null }),
+      makeChain({ error: { message: 'row not found' } }),
+    ])
 
     const result = await moveTask({ id: crypto.randomUUID(), status: 'done', position: 1000 })
     expect(result.success).toBe(false)
@@ -148,7 +154,10 @@ describe('updateTask', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('returns success when task is updated', async () => {
-    mockClient([makeChain({ error: null })])
+    mockClient([
+      makeChain({ data: { id: crypto.randomUUID(), user_id: USER.id, project_id: null }, error: null }),
+      makeChain({ error: null }),
+    ])
 
     const result = await updateTask({ id: crypto.randomUUID(), priority: 'high' })
     expect(result.success).toBe(true)
@@ -157,6 +166,7 @@ describe('updateTask', () => {
   it('triggers re-embedding when title changes', async () => {
     const taskId = crypto.randomUUID()
     mockClient([
+      makeChain({ data: { id: taskId, user_id: USER.id, project_id: null }, error: null }), // permission check
       makeChain({ error: null }),                                                      // update
       makeChain({ data: { title: 'Nuevo título', description: null }, error: null }), // re-fetch
     ])
@@ -184,14 +194,20 @@ describe('deleteTask', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('returns success when task is deleted', async () => {
-    mockClient([makeChain({ error: null })])
+    mockClient([
+      makeChain({ data: { id: crypto.randomUUID(), user_id: USER.id, project_id: null }, error: null }),
+      makeChain({ error: null }),
+    ])
 
     const result = await deleteTask(crypto.randomUUID())
     expect(result.success).toBe(true)
   })
 
   it('returns error when supabase delete fails', async () => {
-    mockClient([makeChain({ error: { message: 'not found' } })])
+    mockClient([
+      makeChain({ data: { id: crypto.randomUUID(), user_id: USER.id, project_id: null }, error: null }),
+      makeChain({ error: { message: 'not found' } }),
+    ])
 
     const result = await deleteTask(crypto.randomUUID())
     expect(result.success).toBe(false)

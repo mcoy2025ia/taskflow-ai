@@ -28,9 +28,9 @@ export const TaskDrawerContext = createContext<(task: TaskWithAssignees) => void
 export function useTaskDrawer() { return useContext(TaskDrawerContext) }
 
 const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
-  { id: 'todo',        label: 'Por hacer',   color: 'bg-slate-100 dark:bg-slate-800' },
-  { id: 'in_progress', label: 'En progreso', color: 'bg-amber-50 dark:bg-amber-950/30' },
-  { id: 'done',        label: 'Completado',  color: 'bg-emerald-50 dark:bg-emerald-950/30' },
+  { id: 'todo',        label: 'Por hacer',   color: 'bg-slate-400' },
+  { id: 'in_progress', label: 'En progreso', color: 'bg-amber-500' },
+  { id: 'done',        label: 'Completado',  color: 'bg-emerald-500' },
 ]
 
 interface BoardProps {
@@ -38,6 +38,9 @@ interface BoardProps {
   members: ProjectMember[]
   projectId: string | null
   currentUserId: string
+  projectName?: string | null
+  projectCompany?: string | null
+  projectDepartment?: string | null
 }
 
 type OptimisticAction = {
@@ -58,7 +61,7 @@ function boardReducer(tasks: TaskWithAssignees[], action: OptimisticAction): Tas
   return tasks
 }
 
-export function KanbanBoard({ initialTasks, members, projectId, currentUserId }: BoardProps) {
+export function KanbanBoard({ initialTasks, members, projectId, currentUserId, projectName, projectCompany, projectDepartment }: BoardProps) {
   const [activeTask, setActiveTask] = useState<TaskWithAssignees | null>(null)
   const [drawerTask, setDrawerTask] = useState<TaskWithAssignees | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -157,7 +160,7 @@ export function KanbanBoard({ initialTasks, members, projectId, currentUserId }:
 
   return (
     <TaskDrawerContext.Provider value={setDrawerTask}>
-      <div className="flex flex-col md:h-full gap-3">
+      <div className="flex flex-col gap-4 md:h-full">
         {members.length > 1 && !isBoardEmpty && (
           <MemberFilterBar
             members={members}
@@ -168,7 +171,13 @@ export function KanbanBoard({ initialTasks, members, projectId, currentUserId }:
 
         {isBoardEmpty ? (
           <div className="md:flex-1 md:min-h-0 md:overflow-y-auto">
-            <CsvImport projectId={projectId} />
+            <CsvImport
+              projectId={projectId}
+              projectName={projectName}
+              company={projectCompany}
+              department={projectDepartment}
+              members={members}
+            />
           </div>
         ) : (
           <DndContext
@@ -177,14 +186,15 @@ export function KanbanBoard({ initialTasks, members, projectId, currentUserId }:
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:flex-1 md:min-h-0 md:overflow-hidden">
+            <div className="grid grid-cols-1 gap-4 md:min-h-0 md:flex-1 md:grid-cols-3 md:overflow-hidden xl:gap-5">
               {columns.map((col, i) => (
                 <KanbanColumn
                   key={col.id}
                   column={col}
-                  colorClass={COLUMNS[i].color}
+                  accentClass={COLUMNS[i].color}
                   isPending={isPending}
                   members={members}
+                  projectId={projectId}
                 />
               ))}
             </div>

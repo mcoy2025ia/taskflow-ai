@@ -5,29 +5,36 @@ import { TASK_TOOLS, executeTool } from './tools'
 import * as Sentry from '@sentry/nextjs'
 
 // ── Selección de proveedor ────────────────────────────────────────────────────
-// CHAT_PROVIDER=groq  → Groq API (default, soporta tool calling + streaming)
-// CHAT_PROVIDER=ollama → Ollama OpenAI-compat API (/v1) — también soporta tools
-//                        en modelos modernos (llama3.2, qwen2.5, mistral-nemo…)
+// CHAT_PROVIDER=deepseek → DeepSeek API (default, OpenAI-compatible, tool calling + streaming)
+// CHAT_PROVIDER=groq     → Groq API (OpenAI-compatible, tool calling + streaming)
+// CHAT_PROVIDER=ollama   → Ollama OpenAI-compat API (/v1) — también soporta tools
+//                          en modelos modernos (llama3.2, qwen2.5, mistral-nemo…)
 //
-// AI_GATEWAY_BASE_URL sobreescribe la base URL de Groq cuando está definida
-// (Vercel AI Gateway proxy). En ese caso el modelo lleva prefijo 'groq/'.
+// AI_GATEWAY_BASE_URL sobreescribe la base URL de Groq/DeepSeek cuando está
+// definida (Vercel AI Gateway proxy). En ese caso el modelo lleva el prefijo
+// del proveedor ('groq/' o 'deepseek/').
 
-const PROVIDER     = process.env.CHAT_PROVIDER ?? 'groq'
+const PROVIDER     = process.env.CHAT_PROVIDER ?? 'deepseek'
 const IS_OLLAMA    = PROVIDER === 'ollama'
+const IS_DEEPSEEK  = PROVIDER === 'deepseek'
+const PROVIDER_LABEL = IS_OLLAMA ? 'Ollama' : IS_DEEPSEEK ? 'DeepSeek' : 'Groq'
 
 const LLM_BASE = IS_OLLAMA
   ? `${process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434'}/v1`
-  : (process.env.AI_GATEWAY_BASE_URL ?? 'https://api.groq.com/openai/v1')
+  : IS_DEEPSEEK
+    ? (process.env.AI_GATEWAY_BASE_URL ?? 'https://api.deepseek.com/v1')
+    : (process.env.AI_GATEWAY_BASE_URL ?? 'https://api.groq.com/openai/v1')
 
 const LLM_MODEL = IS_OLLAMA
   ? (process.env.OLLAMA_MODEL ?? 'llama3.2')
-  : (process.env.AI_GATEWAY_BASE_URL
-      ? 'groq/llama-3.3-70b-versatile'
-      : 'llama-3.3-70b-versatile')
+  : IS_DEEPSEEK
+    ? (process.env.AI_GATEWAY_BASE_URL ? 'deepseek/deepseek-chat' : 'deepseek-chat')
+    : (process.env.AI_GATEWAY_BASE_URL ? 'groq/llama-3.3-70b-versatile' : 'llama-3.3-70b-versatile')
 
 interface AgentOptions {
   supabase: SupabaseClient<Database>
   userId: string
+  projectId?: string | null
   messages: ChatMessage[]
   voiceMode: boolean
 }
@@ -45,6 +52,11 @@ function llmHeaders(): Record<string, string> {
     if (process.env.OLLAMA_API_KEY) {
       headers['Authorization'] = `Bearer ${process.env.OLLAMA_API_KEY}`
     }
+    return headers
+  }
+
+  if (IS_DEEPSEEK) {
+    headers['Authorization'] = `Bearer ${process.env.DEEPSEEK_API_KEY ?? ''}`
     return headers
   }
 
@@ -81,7 +93,7 @@ async function callLLM(messages: ChatMessage[], stream: boolean) {
 
   if (!response.ok) {
     const body = await response.text().catch(() => '')
-    throw new Error(`${IS_OLLAMA ? 'Ollama' : 'Groq'} error ${response.status}: ${body}`)
+    throw new Error(`${PROVIDER_LABEL} error ${response.status}: ${body}`)
   }
 
   if (stream) return response.body as ReadableStream<Uint8Array>
@@ -170,7 +182,7 @@ async function pipeAnthropicStream(
 const DESTRUCTIVE_TOOLS = new Set(['delete_task'])
 
 export function runAgent(options: AgentOptions, relevantTasks: unknown[]): ReadableStream<Uint8Array> {
-  const { supabase, userId, messages } = options
+  const { supabase, userId, projectId = null, messages } = options
   const encoder = new TextEncoder()
 
   function emit(controller: ReadableStreamDefaultController, data: unknown) {
@@ -204,11 +216,16 @@ export function runAgent(options: AgentOptions, relevantTasks: unknown[]): Reada
 
             let taskTitle: string | null = null
             if (parsedArgs.task_id) {
-              const { data } = await supabase
+              let titleQuery = supabase
                 .from('tasks')
                 .select('title')
                 .eq('id', parsedArgs.task_id as string)
-                .eq('user_id', userId)
+
+              titleQuery = projectId
+                ? titleQuery.eq('project_id', projectId)
+                : titleQuery.eq('user_id', userId).is('project_id', null)
+
+              const { data } = await titleQuery
                 .single()
               taskTitle = data?.title ?? null
             }
@@ -232,7 +249,7 @@ export function runAgent(options: AgentOptions, relevantTasks: unknown[]): Reada
               emit(controller, { type: 'tool_call', tool: tc.function.name, args: parsedArgs })
               Sentry.addBreadcrumb({ category: 'agent', message: 'agent.tool_called', data: { tool: tc.function.name }, level: 'info' })
 
-              const result = await executeTool(tc.function.name, parsedArgs, { supabase, userId })
+              const result = await executeTool(tc.function.name, parsedArgs, { supabase, userId, projectId })
               emit(controller, { type: 'tool_result', tool: tc.function.name, result })
 
               return { role: 'tool' as const, tool_call_id: tc.id, content: result }
@@ -256,13 +273,13 @@ export function runAgent(options: AgentOptions, relevantTasks: unknown[]): Reada
         try {
           llmStream = await callLLM(currentMessages, true)
         } catch (llmErr) {
-          console.warn(`[agent] ${IS_OLLAMA ? 'Ollama' : 'Groq'} no disponible, usando Claude Haiku fallback:`, llmErr)
+          console.warn(`[agent] ${PROVIDER_LABEL} no disponible, usando Claude Haiku fallback:`, llmErr)
           usedFallback = true
           try {
             const haikuStream = await callClaudeHaikuStream(currentMessages)
             await pipeAnthropicStream(haikuStream, (data) => emit(controller, data))
           } catch (haikuErr) {
-            throw new Error(`Tanto ${IS_OLLAMA ? 'Ollama' : 'Groq'} como Claude Haiku fallaron: ${haikuErr}`)
+            throw new Error(`Tanto ${PROVIDER_LABEL} como Claude Haiku fallaron: ${haikuErr}`)
           }
         }
 
