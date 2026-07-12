@@ -7,7 +7,7 @@ SaaS de productividad multi-usuario: tablero Kanban colaborativo + agente RAG co
 
 ## Stack exacto
 - **Frontend**: Next.js 16.2.4 App Router + TypeScript strict + React 19
-- **Auth + DB**: Supabase (`@supabase/ssr`) con RLS en todas las tablas; 10 migraciones en `supabase/migrations/`
+- **Auth + DB**: Supabase (`@supabase/ssr`) con RLS en todas las tablas; 13 migraciones en `supabase/migrations/` (001-013)
 - **Embeddings**: Voyage AI `voyage-3-lite` → 512 dimensiones + reranking con `rerank-2-lite` (`src/lib/ai/voyage.ts`)
 - **Chat**: DeepSeek `deepseek-chat` (OpenAI-compatible) con tool calling; alternativas Groq/Ollama vía `CHAT_PROVIDER`; fallback a Claude Haiku 4.5 (`ANTHROPIC_API_KEY`)
 - **UI**: Tailwind CSS v4 + shadcn/ui + `@base-ui/react` + @dnd-kit + Geist font (variable font, sin flash de tema)
